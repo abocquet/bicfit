@@ -1,0 +1,6 @@
+.ipynb_checkpoints
+.idea
+.venv
+*.ipynb
+uv.lock
+*.pyc

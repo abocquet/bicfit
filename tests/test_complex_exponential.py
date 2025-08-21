@@ -1,0 +1,80 @@
+import numpy as np
+import pytest
+
+from bicfit import fit_complex_exponential
+
+testdata = [
+    (1.0, 13.7, 0.92, 61 + 62j, 3.6, 110),
+    (21, 2, 0.01, 1, 50, 100),
+]
+
+
+@pytest.mark.parametrize("amplitude, w, kappa, offset, horizon, n_points", testdata)
+@pytest.mark.parametrize("with_post_fit", [False, True])
+@pytest.mark.parametrize("noise,tol", [(0, 0.01), (0.1, 0.15)])
+def test_single_exponential(amplitude, kappa, w, offset, horizon, n_points, with_post_fit, noise, tol):
+    times = np.linspace(0, horizon, n_points)
+    noise = np.random.normal(0, noise, n_points) + 1j * np.random.normal(0, noise, n_points)
+    signal = offset + amplitude * np.exp((1j * w - kappa) * times) + noise
+
+    # fit the signal
+    result = fit_complex_exponential(times, signal, n_modes=1, with_post_fit=with_post_fit)
+    try:
+        assert abs(result.modes[0].amplitude - amplitude) / amplitude < tol, "amplitude"
+        assert abs(result.modes[0].w - w) / w < tol, "w"
+        assert abs(result.modes[0].kappa - kappa) / kappa < tol, "kappa"
+        assert abs(result.offset - offset) / abs(offset) < tol, "offset"
+    except AssertionError as e:
+        failed_test = e.args[0].split("\n")[0]
+        print(
+            f"Failed estimating '{failed_test}' for \n"
+            f"- w        = {w} (got {result.modes[0].w})\n"
+            f"- kappa    = {kappa} (got {result.modes[0].kappa})\n"
+            f"- offset   = {offset} (got {result.offset})\n"
+            f"- horizon  = {horizon}\n"
+            f"- n_points = {n_points}"
+        )
+        raise e
+
+@pytest.mark.parametrize("with_post_fit", [False, True])
+@pytest.mark.parametrize("noise,tol", [(0, 0.01), (0.1, 0.15)])
+def test_two_exponential(with_post_fit, noise, tol):
+    n_points = 100
+    times = np.linspace(0, 150, n_points)
+    noise = np.random.normal(0, noise, n_points) + 1j * np.random.normal(0, noise, n_points)
+
+    offset = 10.2 + 20.3j
+    a1, a2 = 1.0, 0.5
+    w1, w2 = 0.2, 0.4
+    kappa1, kappa2 = 0.05, 0.01
+
+    signal = offset
+    signal += a1 * np.exp((1j * w1 - kappa1) * times)
+    signal += a2 * np.exp((1j * w2 - kappa2) * times)
+    signal += noise
+
+    # fit the signal
+    result = fit_complex_exponential(times, signal, n_modes=2, with_post_fit=with_post_fit)
+    try:
+        assert abs(result.modes[0].amplitude - a1) / a1 < tol, "a1"
+        assert abs(result.modes[0].w - w1) / w1 < tol, "w1"
+        assert abs(result.modes[0].kappa - kappa1) / kappa1 < tol, "kappa1"
+
+        assert abs(result.modes[1].amplitude - a2) / a2 < tol, "a2"
+        assert abs(result.modes[1].w - w2) / w2 < tol, "w2"
+        assert abs(result.modes[1].kappa - kappa2) / kappa2 < tol, "kappa2"
+
+        assert abs(result.offset - offset) / abs(offset) < tol, "offset"
+    except AssertionError as e:
+        failed_test = e.args[0].split("\n")[0]
+        print(
+            f"Failed estimating '{failed_test}' for \n"
+            f"- amplitude 1 = {result.modes[0].amplitude}\n"
+            f"- w 1         = {result.modes[0].w}\n"
+            f"- kappa 1     = {result.modes[0].kappa})\n"
+            f"- amplitude 2 = {result.modes[1].amplitude}\n"
+            f"- w 2         = {result.modes[1].w}\n"
+            f"- kappa 2     = {result.modes[1].kappa})\n"
+            f"- offset      = {result.offset})\n"
+        )
+        raise e
