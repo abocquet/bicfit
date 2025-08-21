@@ -13,7 +13,7 @@ def plot(
     result: ComplexResult | DampedCosineResult | ExponentialDecayResult[FloatLike],
     axs: Axes | List[Axes] | None = None,
 ):
-    if isinstance(result, (ComplexResult, ExponentialDecayResult[complex])):
+    if np.iscomplexobj(result.signal):
         if axs is not None:
             if not isinstance(axs, (list, np.ndarray)):
                 raise TypeError(
@@ -34,8 +34,12 @@ def plot(
 def _plot_complex(
     result: ComplexResult | ExponentialDecayResult[complex], axs: List[Axes] | None
 ):
+    fig = None
     if axs is None:
-        _, axs = plt.subplots(1, 3, figsize=(15, 5))
+        fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+    if fig is not None:
+        fig.suptitle("Fit result: " + result.pretty_repr())
 
     dense_times = np.linspace(result.times[0], result.times[-1], 1000)
     axs[0].plot(result.times, result.signal.real, label="Real Part")
@@ -70,8 +74,12 @@ def _plot_complex(
 
 
 def _plot_real(result: DampedCosineResult | ExponentialDecayResult[float], ax: Axes | None):
+    fig = None
     if ax is None:
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
+
+    if fig is not None:
+        fig.suptitle("Fit result: " + result.pretty_repr())
 
     dense_times = np.linspace(result.times[0], result.times[-1], 1000)
     ax.plot(result.times, result.signal, label="Signal")

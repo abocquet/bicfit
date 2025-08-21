@@ -55,3 +55,10 @@ class ComplexResult(Result):
 
     def __repr__(self):
         return f"ComplexResult(offset={self.offset}, modes={self.modes})"
+
+    def pretty_repr(self):
+        if len(self.amplitudes) == 1:
+            return f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j, amplitude = {self.amplitudes[0].real:0.2e}+{self.amplitudes[0].imag:0.2e}j,  w = {self.ws[0]:0.2e}, kappa = {self.kappas[0]:0.2e}"
+        else:
+            return f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j, {len(self.amplitudes)} modes"
+

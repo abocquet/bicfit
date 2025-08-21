@@ -41,3 +41,20 @@ class ExponentialDecayResult(Result, Generic[F]):
 
     def __repr__(self):
         return f"ExponentialDecayResult(offset={self.offset}, modes={self.modes})"
+
+    def pretty_repr(self):
+        if np.iscomplex(self.offset):
+            offset_str = f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j"
+        else:
+            offset_str = f"offset = {self.offset:0.2f}"
+
+
+        if len(self.amplitudes) == 1:
+            if np.iscomplex(self.amplitudes[0]):
+                amplitude_str = f"{self.amplitudes[0].real:0.2e} + {self.amplitudes[0].imag:0.2e}j"
+            else:
+                amplitude_str = f"{self.amplitudes[0]:0.2e}"
+
+            return f"offset = {offset_str}, amplitude = {amplitude_str}, kappa = {self.kappas[0]:0.2e}"
+        else:
+            return f"offset = {offset_str}, {len(self.amplitudes)} modes"

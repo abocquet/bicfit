@@ -46,3 +46,9 @@ class DampedCosineResult(Result):
 
     def __repr__(self):
         return f"DampedCosineResult(offset={self.offset}, modes={self.modes})"
+
+    def pretty_repr(self):
+        if len(self.amplitudes) == 1:
+            return f"offset = {self.offset:0.2f}, amplitude = {self.amplitudes[0]:0.2e}, phase = {self.phases[0]:0.2f}, w = {self.ws[0]:0.2e}, kappa = {self.kappas[0]:0.2e}"
+        else:
+            return f"offset = {self.offset:0.2f}, {len(self.amplitudes)} modes"
