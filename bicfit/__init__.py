@@ -8,84 +8,122 @@ from .post_fit import (
     _post_fit_damped_cosine,
     _post_fit_exponential,
 )
-from .types import Result, ComplexMode, RealMode, Exponential
+from .results import ComplexResult, ExponentialResult, RealResult
 
 
 def fit_complex_exponential(
-    times: np.ndarray,
-    signal: np.ndarray,
+    times: np.ndarray[float],
+    signal: np.ndarray[complex],
     n_modes: int = 1,
     with_post_fit: bool = True,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
-) -> Result[ComplexMode]:
-    result = bicfit(
-        times, signal, n_modes=n_modes, is_complex=True, tol=tol, L_fraction=L_fraction
+) -> ComplexResult:
+    offset, amplitudes, ws, kappas = bicfit(
+        times, signal, n_modes=n_modes, tol=tol, L_fraction=L_fraction
     )
     if with_post_fit:
-        result = _post_fit_complex_exponential(times, signal, result)
+        offset, amplitudes, ws, kappas = _post_fit_complex_exponential(
+            times, signal, offset, amplitudes, ws, kappas
+        )
 
-    return result
+    return ComplexResult(
+        times=times,
+        signal=signal,
+        offset=offset,
+        amplitudes=amplitudes,
+        ws=ws,
+        kappas=kappas,
+    )
 
 
 def fit_exponential(
-    times: np.ndarray,
-    signal: np.ndarray,
+    times: np.ndarray[float],
+    signal: np.ndarray[float | complex],
     n_modes: int = 1,
     with_post_fit: bool = True,
     is_complex: bool = False,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
-) -> Result[Exponential]:
-    result = bicfit(
+) -> ExponentialResult:
+    offset, amplitudes, ws, kappas = bicfit(
         times,
         signal,
         n_modes=n_modes,
-        is_complex=True,
         tol=tol,
         L_fraction=L_fraction,
     )
     if with_post_fit:
-        result = _post_fit_exponential(times, signal, result, is_complex)
+        result = _post_fit_exponential(
+            times, signal, offset, amplitudes, kappas, is_complex
+        )
     else:
-        modes = []
-        for mode in result.modes:
-            amplitude = mode.complex_amplitude if is_complex else mode.complex_amplitude.real
-            modes.append(Exponential(amplitude, mode.kappa))
-        result.modes = modes
-
         if not is_complex:
-            result.offset = result.offset.real
+            amplitudes = amplitudes.real
+            offset = offset.real
+
+        result = ExponentialResult(
+            times=times,
+            signal=signal,
+            offset=offset,
+            amplitudes=amplitudes,
+            kappas=kappas,
+        )
 
     return result
 
 
 def fit_damped_cosine(
-    times: np.ndarray,
-    signal: np.ndarray,
+    times: np.ndarray[float],
+    signal: np.ndarray[float],
     n_modes: int = 1,
     with_post_fit: bool = True,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
-) -> Result[RealMode]:
-    result = bicfit(
-        times, signal, n_modes=n_modes, is_complex=False, tol=tol, L_fraction=L_fraction
-    )
-    if with_post_fit:
-        result = _post_fit_damped_cosine(times, signal, result)
+) -> RealResult:
+    # since the signal is real, there are two exponential per term
+    # since 2cos(x) = exp(ix) + exp(-ix)
 
+    offset, amplitudes, ws, kappas = bicfit(
+        times,
+        signal,
+        n_modes=2 * n_modes,
+        tol=tol,
+        L_fraction=L_fraction,
+    )
+
+    amplitudes, phases, ws, kappas = _match_real_modes(amplitudes, ws, kappas, tol=tol)
+    if abs(offset.imag) > tol:
+        raise RuntimeError(
+            f"Expected the offset to be real, but got {offset.imag} imaginary part, above fixed tolerance {tol}"
+        )
+    offset = offset.real
+
+    if with_post_fit:
+        result = _post_fit_damped_cosine(
+            times, signal, offset, amplitudes, phases, ws, kappas
+        )
+    else:
+        result = RealResult(
+            times=times,
+            signal=signal,
+            offset=offset,
+            amplitudes=amplitudes,
+            phases=phases,
+            ws=ws,
+            kappas=kappas,
+        )
 
     return result
 
 
 def bicfit(
-    times: np.ndarray,
-    signal: np.ndarray,
+    times: np.ndarray[float],
+    signal: np.ndarray[complex],
     n_modes: int = 1,
-    is_complex: bool | None = None,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
-):
+) -> (complex, np.ndarray[complex], np.ndarray[complex], np.ndarray[complex]):
     """
     Fits a signal of the form s(t) = sum_k a_k exp(x_k t)
     using a pencil method.
@@ -107,12 +145,8 @@ def bicfit(
             f"Expected times and signal of shape (n,) but got them of shape {times.shape} and {signal.shape}"
         )
 
-    if is_complex is None:
-        is_complex = np.iscomplexobj(signal)
-
     # preprocess by adding an artificial offset to make
     # the offset fit more stable
-    original_signal = np.copy(signal)
     offset = -signal.mean() + (1 + 1j) * 1e3 * signal.std()
     signal = signal + offset
 
@@ -129,14 +163,7 @@ def bicfit(
         Y[:, i] = signal[i : i + N - L]
     U, S, Vh = np.linalg.svd(Y, False)
 
-    cutoff_idx = 1  # set one mode for the constant term
-    if is_complex:
-        cutoff_idx += n_modes
-    else:
-        # is the signal is real, there are
-        # two exponential per term
-        # since 2cos(x) = exp(ix) + exp(-ix)
-        cutoff_idx += 2 * n_modes
+    cutoff_idx = n_modes + 1  # set one mode for the constant term
 
     # filter all eigenvalues lower than the cutoff
     cutoff = np.sort(S)[-cutoff_idx]
@@ -151,27 +178,23 @@ def bicfit(
     Y1_inv = np.linalg.pinv(Y1)
     eigenvalues = np.linalg.eigvals(Y1_inv @ Y2)
 
-    modes = _fit_amplitudes(eigenvalues, times, signal, cutoff_idx)
-    constant_mode_idx = np.argmin(
-        [abs(np.exp(mode.kappa + 1j * mode.w) - 1) for mode in modes]
-    )
-    constant_mode = modes[constant_mode_idx]
-    offset = constant_mode.complex_amplitude - offset
-    modes = modes[:constant_mode_idx] + modes[constant_mode_idx + 1 :]
+    amplitudes, ws, kappas = _fit_amplitudes(eigenvalues, times, signal, cutoff_idx)
+    constant_mode_idx = np.argmin(abs(np.exp(1j * ws - kappas) - 1))
 
-    if not is_complex:
-        modes = _match_real_modes(modes, tol=tol)
-        if abs(offset.imag) > tol:
-            raise RuntimeError(
-                f"Expected the offset to be real, but got {offset.imag} imaginary part, above fixed tolerance {tol}"
-            )
-        offset = offset.real
-    return Result(offset=offset, modes=modes, times=times, signal=original_signal)
+    offset = amplitudes[constant_mode_idx] - offset
+    amplitudes = np.delete(amplitudes, constant_mode_idx)
+    ws = np.delete(ws, constant_mode_idx)
+    kappas = np.delete(kappas, constant_mode_idx)
+
+    return offset, amplitudes, ws, kappas
 
 
 def _fit_amplitudes(
-    eigenvalues: np.ndarray, times: np.ndarray, signal: np.ndarray, n_modes: int
-) -> List[ComplexMode]:
+    eigenvalues: np.ndarray[complex],
+    times: np.ndarray[float],
+    signal: np.ndarray[complex],
+    n_modes: int,
+) -> (np.ndarray[complex], np.ndarray[complex], np.ndarray[complex]):
     N = len(times)
 
     # Vandermonde Matrix
@@ -187,76 +210,73 @@ def _fit_amplitudes(
 
     coefficients = np.linalg.lstsq(V, signal, rcond=None)[0]
 
-    modes = []
     dt = np.diff(times)[0]
-    for eigenvalue, coefficient in zip(eigenvalues, coefficients):
-        w = np.angle(eigenvalue) / dt
-        kappa = -np.log(np.abs(eigenvalue)) / dt
-        modes.append(
-            ComplexMode(
-                complex_amplitude=coefficient,
-                w=w,
-                kappa=kappa,
-            )
-        )
+    ws = np.angle(eigenvalues) / dt
+    kappas = -np.log(np.abs(eigenvalues)) / dt
 
-    return modes
+    return coefficients, ws, kappas
 
 
-def _match_real_modes(modes: List[ComplexMode], tol: float) -> List[RealMode]:  # noqa: F821
-    # todo: the matching should be made only between the modes with negative frequencies to
-    # the modes with positive frequencies to avoid love triangles
-    n = len(modes)
+def _match_real_modes(
+    amplitudes: np.ndarray[complex],
+    ws: np.ndarray[float],
+    kappas: np.ndarray[float],
+    tol: float,
+) -> (np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]):
+    n = len(amplitudes)
+    assert len(amplitudes) == len(ws) == len(kappas)
     assert n % 2 == 0, "Expected an even number of modes to match real modes"
-    normalized_frequency = [1j * abs(mode.w) + mode.kappa for mode in modes]
-    cost = np.zeros((n, n))
 
-    for i in range(n):
-        for j in range(n):
-            if i == j:
-                cost[i, j] = np.inf
-            else:
-                cost[i, j] = abs(normalized_frequency[i] - normalized_frequency[j])
+    normalized_frequency = 1j * abs(ws) + kappas
 
-    row_indices, col_indices = linear_sum_assignment(cost)
+    # step 1: separate frequencies that are in the upper and lower complex plane
+    positive_w_indices, negative_w_indices = np.where(ws > 0)[0], np.where(ws < 0)[0]
 
-    assignment = dict()
-    for idx_1, idx_2 in zip(row_indices, col_indices):
-        mode_1, mode_2 = modes[idx_1], modes[idx_2]
-        if mode_1.w < 0:
-            mode_2, mode_1 = mode_1, mode_2
-        assignment[mode_1] = mode_2
+    # step 2: get their normalized frequencies, i.e. mapped to the upper plane
+    positive_w_normalized_frequencies = normalized_frequency[positive_w_indices]
+    negative_w_normalized_frequencies = normalized_frequency[negative_w_indices]
 
-    real_modes = []
-    for mode_1, mode_2 in assignment.items():
-        if abs(mode_1.w - (-mode_2.w)) > tol:
-            raise RuntimeError(
-                f"All real modes frequencies are expected to have close frequencies "
-                f"(within {tol}) but got two paired modes with pulsations {mode_1.w} and {mode_2.w}"
-            )
-
-        if abs(mode_1.kappa - mode_2.kappa) > tol:
-            raise RuntimeError(
-                f"All real modes frequencies are expected to have close decay rates "
-                f"(within {tol}) but got two paired modes with decay rates {mode_1.kappa} and {mode_2.kappa}"
-            )
-
-        if abs(mode_1.complex_amplitude - np.conj(mode_2.complex_amplitude)) > tol:
-            raise RuntimeError(
-                f"All real modes frequencies are expected to have conjugate complex amplitudes "
-                f"(within {tol}) but got two paired modes "
-                f"with amplitudes {mode_1.complex_amplitude} and {mode_2.complex_amplitude}"
-            )
-
-        w = np.mean([mode_1.w, -mode_2.w]).real
-        kappa = np.mean([mode_1.kappa, mode_2.kappa]).real
-        amplitude = (
-            np.abs([mode_1.complex_amplitude, mode_2.complex_amplitude]).sum().real
+    # step 3: create the cost matrix, that is the distance between the normalized frequencies
+    positive_w_normalized_frequencies_mg, negative_w_normalized_frequencies_mg = (
+        np.meshgrid(
+            positive_w_normalized_frequencies, negative_w_normalized_frequencies
         )
-        phase = np.mean(
-            [np.angle(mode_1.complex_amplitude), -np.angle(mode_2.complex_amplitude)]
-        ).real
+    )
+    cost = np.abs(
+        positive_w_normalized_frequencies_mg - negative_w_normalized_frequencies_mg
+    )
 
-        real_modes.append(RealMode(w=w, kappa=kappa, amplitude=amplitude, phase=phase))
+    # step 4: use the linear sum assignment to find the best matching pairs
+    # and store the initial indices (ie of amplitudes, ws, kappas) in idx_1 and idx_2
+    row_indices, col_indices = linear_sum_assignment(cost)
+    idx_1, idx_2 = positive_w_indices[row_indices], negative_w_indices[col_indices]
 
-    return real_modes
+    # step 5: check if the pairs are valid, i.e. they have close frequencies, decay rates and amplitudes
+    if np.any(abs(ws[idx_1] - (-ws[idx_2])) > tol):
+        raise RuntimeError(
+            f"All real modes frequencies are expected to have close frequencies "
+            f"(within {tol}) but got two paired modes with pulsations {ws[idx_1]} and {ws[idx_2]}"
+        )
+
+    if np.any(abs(kappas[idx_1] - kappas[idx_2]) > tol):
+        raise RuntimeError(
+            f"All real modes frequencies are expected to have close decay rates "
+            f"(within {tol}) but got two paired modes with decay rates {kappas[idx_1]} and {kappas[idx_2]}"
+        )
+
+    if np.any(abs(amplitudes[idx_1] - np.conj(amplitudes[idx_2])) > tol):
+        raise RuntimeError(
+            f"All real modes frequencies are expected to have conjugate complex amplitudes "
+            f"(within {tol}) but got two paired modes "
+            f"with amplitudes {amplitudes[idx_1]} and {amplitudes[idx_2]}"
+        )
+
+    # step 6: create the real modes from the matched pairs
+    real_ws = np.mean([ws[idx_1], -ws[idx_2]], axis=0).real
+    real_kappas = np.mean([kappas[idx_1], kappas[idx_2]], axis=0).real
+    real_amplitudes = np.abs([amplitudes[idx_1], amplitudes[idx_2]]).sum(axis=0).real
+    real_phases = np.mean(
+        [np.angle(amplitudes[idx_1]), -np.angle(amplitudes[idx_2])], axis=0
+    ).real
+
+    return real_amplitudes, real_phases, real_ws, real_kappas

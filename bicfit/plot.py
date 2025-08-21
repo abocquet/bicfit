@@ -3,11 +3,16 @@ from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .types import Result
 from matplotlib.axes._axes import Axes
 
+from .results import ComplexResult, ExponentialResult, RealResult
+from .types import FloatLike
 
-def plot(result: Result, axs: Axes | List[Axes] | None = None):
+
+def plot(
+    result: ComplexResult | RealResult | ExponentialResult[FloatLike],
+    axs: Axes | List[Axes] | None = None,
+):
     if np.iscomplexobj(result.signal):
         if axs is not None:
             if not isinstance(axs, (list, np.ndarray)):
@@ -26,7 +31,9 @@ def plot(result: Result, axs: Axes | List[Axes] | None = None):
         _plot_real(result, axs)
 
 
-def _plot_complex(result: Result, axs: List[Axes] | None):
+def _plot_complex(
+    result: ComplexResult | ExponentialResult[complex], axs: List[Axes] | None
+):
     if axs is None:
         _, axs = plt.subplots(1, 3, figsize=(15, 5))
 
@@ -62,7 +69,7 @@ def _plot_complex(result: Result, axs: List[Axes] | None):
     axs[2].legend()
 
 
-def _plot_real(result: Result, ax: Axes | None):
+def _plot_real(result: RealResult | ExponentialResult[float], ax: Axes | None):
     if ax is None:
         _, ax = plt.subplots()
 

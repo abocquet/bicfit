@@ -1,28 +1,37 @@
-
 import numpy as np
 import pytest
 from numpy.random import PCG64, Generator
 
-from bicfit import fit_damped_cosine
+from bicfit import fit_damped_cosine, RealResult
 
 testdata = [
-    (1.0, 0.2, 0.05, np.pi/2, 10.0, 150, 110),
+    (1.0, 0.2, 0.05, np.pi / 2, 10.0, 150, 110),
     (2.3, 0.5, 0.1, 1.0, 3.3, 120, 90),
 ]
 
 
-@pytest.mark.parametrize("amplitude, w, kappa, phase, offset, horizon, n_points", testdata)
+@pytest.mark.parametrize(
+    "amplitude, w, kappa, phase, offset, horizon, n_points", testdata
+)
 @pytest.mark.parametrize("with_post_fit", [False, True])
 @pytest.mark.parametrize("noise,tol", [(0, 0.08), (0.05, 0.2)])
-def test_single_damped_cosine(amplitude, w, kappa, phase, offset, horizon, n_points, with_post_fit, noise, tol):
+def test_single_damped_cosine(
+    amplitude, w, kappa, phase, offset, horizon, n_points, with_post_fit, noise, tol
+):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
     noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
-    signal = offset + amplitude * np.cos(phase + w * times) * np.exp(-kappa * times) + noise_vec.real
+    signal = (
+        offset
+        + amplitude * np.cos(phase + w * times) * np.exp(-kappa * times)
+        + noise_vec.real
+    )
 
     result = fit_damped_cosine(times, signal, n_modes=1, with_post_fit=with_post_fit)
     try:
-        assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, "amplitude"
+        assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
+            "amplitude"
+        )
         assert abs(result.modes[0].w - w) / w < tol, "w"
         assert abs(result.modes[0].kappa - kappa) / kappa < tol, "kappa"
         dphi = (result.modes[0].phase - phase + np.pi) % (2 * np.pi) - np.pi
@@ -41,6 +50,7 @@ def test_single_damped_cosine(amplitude, w, kappa, phase, offset, horizon, n_poi
             f"- n_points = {n_points}"
         )
         raise e
+
 
 @pytest.mark.parametrize("with_post_fit", [False, True])
 @pytest.mark.parametrize("noise,tol", [(0, 0.08), (0.05, 0.2)])
@@ -89,3 +99,21 @@ def test_two_damped_cosines(with_post_fit, noise, tol):
         )
         raise e
 
+
+def test_individual_mode():
+    result = RealResult(
+        offset=0.0,
+        times=np.array([0.0, 1.0]),
+        signal=np.array([2.0, 3.0]),
+        amplitudes=np.array([4.0, 5.0, 6.0]),
+        phases=np.array([7.0, 8.0, 9.0]),
+        ws=np.array([10.0, 11.0, 12.0]),
+        kappas=np.array([13.0, 14.0, 15.0]),
+    )
+
+    t = np.linspace(0, 10, 11)
+    np.set_printoptions(linewidth=1000)
+    assert result(t).shape == (11,)
+    assert np.allclose(result(t), result.modes[0](t) +  result.modes[1](t) +  result.modes[2](t))
+    assert result(0.0).shape == tuple()
+    assert np.isclose(result(0.0),  result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0) )
