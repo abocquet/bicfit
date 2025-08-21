@@ -1,12 +1,11 @@
-from typing import Callable
+import functools as ft
+from typing import Callable, Tuple
 
 import numpy as np
-import functools as ft
-
 from scipy.optimize import minimize
 
 from .models import _damped_cosine_model, _complex_exponential_model, _exponential_model
-from .results import ComplexResult, RealResult, ExponentialResult
+from .results import DampedCosineResult
 from .types import FloatLike
 
 NO_BOUND = (None, None)
@@ -47,9 +46,9 @@ def _post_fit_complex_exponential(
     signal: np.ndarray,
     offset: complex,
     amplitudes: np.ndarray[complex],
-    ws: np.ndarray[complex],
-    kappas: np.ndarray[complex],
-) -> ComplexResult:
+    ws: np.ndarray[float],
+    kappas: np.ndarray[float],
+) -> Tuple[complex, np.ndarray[complex], np.ndarray[float], np.ndarray[float]]:
     assert len(amplitudes) == len(ws) == len(kappas)
 
     cost = ft.partial(
@@ -80,12 +79,12 @@ def _exponential_adapter(
     t: np.ndarray[float], x: np.ndarray[FloatLike], is_complex: bool
 ) -> np.ndarray[FloatLike]:
     if is_complex:
-        offset = x[0] + 1j * x[1]
+        offset = complex(x[0] + 1j * x[1])
         modes = x[2:].reshape(-1, 3)
         amplitudes_re, amplitudes_im, kappas = modes[:, 0], modes[:, 1], modes[:, 2]
         amplitudes = amplitudes_re + 1j * amplitudes_im
     else:
-        offset = x[0]
+        offset = complex(x[0])
         modes = x[1:].reshape(-1, 2)
         amplitudes, kappas = modes[:, 0], modes[:, 1]
 
@@ -99,7 +98,7 @@ def _post_fit_exponential(
     amplitudes: np.ndarray[complex],
     kappas: np.ndarray[complex],
     is_complex: bool,
-) -> ExponentialResult:
+) -> Tuple[FloatLike, np.ndarray[FloatLike], np.ndarray[FloatLike]]:
     assert len(amplitudes) == len(kappas)
 
     cost = ft.partial(
@@ -134,15 +133,7 @@ def _post_fit_exponential(
         offset = xopt[0]
         amplitudes, kappas = xopt[1:].reshape(-1, 2).T
 
-    new_result = ExponentialResult(
-        offset=offset,
-        times=times,
-        signal=signal,
-        amplitudes=amplitudes,
-        kappas=kappas,
-    )
-
-    return new_result
+    return offset, amplitudes, kappas
 
 
 # =====================================================================================================================
@@ -153,7 +144,7 @@ def _post_fit_exponential(
 def _damped_cosine_adapter(
     t: np.ndarray[float], x: np.ndarray[float]
 ) -> np.ndarray[float]:
-    offset, modes = x[0], x[1:].reshape(-1, 4)
+    offset, modes = float(x[0]), x[1:].reshape(-1, 4)
     amplitudes, phases, ws, kappas = modes[:, 0], modes[:, 1], modes[:, 2], modes[:, 3]
     return _damped_cosine_model(t, offset, amplitudes, phases, ws, kappas)
 
@@ -166,7 +157,7 @@ def _post_fit_damped_cosine(
     phases: np.ndarray[float],
     ws: np.ndarray[float],
     kappas: np.ndarray[float],
-) -> RealResult:
+) -> DampedCosineResult:
     cost = ft.partial(_cost, times=times, signal=signal, model=_damped_cosine_adapter)
 
     x0 = [offset]
@@ -180,7 +171,7 @@ def _post_fit_damped_cosine(
 
     amplitudes, phases, ws, kappas = xopt[1:].reshape(-1, 4).T
 
-    new_result = RealResult(
+    new_result = DampedCosineResult(
         times=times,
         signal=signal,
         offset=offset,

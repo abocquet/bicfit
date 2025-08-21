@@ -1,14 +1,12 @@
-import numpy as np
-
 from .complex_mode import ComplexMode, ComplexResult
-from .real_mode import RealMode, RealResult
-from .exponential_mode import ExponentialResult, ExponentialMode
+from .damped_cosine_mode import DampedCosineMode, DampedCosineResult
+from .exponential_decay_mode import ExponentialDecayResult, ExponentialDecayMode
 
 __all__ = [
     "ComplexMode",
     "ComplexResult",
-    "RealMode",
-    "RealResult",
-    "ExponentialResult",
-    "ExponentialMode",
+    "DampedCosineMode",
+    "DampedCosineResult",
+    "ExponentialDecayResult",
+    "ExponentialDecayMode",
 ]

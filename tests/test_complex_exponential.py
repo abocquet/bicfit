@@ -108,6 +108,10 @@ def test_individual_mode():
 
     t = np.linspace(0, 10, 11)
     assert result(t).shape == (11,)
-    assert np.allclose(result(t), result.modes[0](t) +  result.modes[1](t) +  result.modes[2](t))
+    assert np.allclose(
+        result(t), result.modes[0](t) + result.modes[1](t) + result.modes[2](t)
+    )
     assert result(0.0).shape == tuple()
-    assert np.isclose(result(0.0),  result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0) )
+    assert np.isclose(
+        result(0.0), result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0)
+    )

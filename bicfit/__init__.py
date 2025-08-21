@@ -1,4 +1,4 @@
-from typing import List
+from typing import Tuple
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
@@ -8,7 +8,7 @@ from .post_fit import (
     _post_fit_damped_cosine,
     _post_fit_exponential,
 )
-from .results import ComplexResult, ExponentialResult, RealResult
+from .results import ComplexResult, ExponentialDecayResult, DampedCosineResult
 
 
 def fit_complex_exponential(
@@ -37,7 +37,7 @@ def fit_complex_exponential(
     )
 
 
-def fit_exponential(
+def fit_exponential_decay(
     times: np.ndarray[float],
     signal: np.ndarray[float | complex],
     n_modes: int = 1,
@@ -45,7 +45,7 @@ def fit_exponential(
     is_complex: bool = False,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
-) -> ExponentialResult:
+) -> ExponentialDecayResult:
     offset, amplitudes, ws, kappas = bicfit(
         times,
         signal,
@@ -54,7 +54,7 @@ def fit_exponential(
         L_fraction=L_fraction,
     )
     if with_post_fit:
-        result = _post_fit_exponential(
+        offset, amplitudes, kappas = _post_fit_exponential(
             times, signal, offset, amplitudes, kappas, is_complex
         )
     else:
@@ -62,13 +62,13 @@ def fit_exponential(
             amplitudes = amplitudes.real
             offset = offset.real
 
-        result = ExponentialResult(
-            times=times,
-            signal=signal,
-            offset=offset,
-            amplitudes=amplitudes,
-            kappas=kappas,
-        )
+    result = ExponentialDecayResult(
+        times=times,
+        signal=signal,
+        offset=offset,
+        amplitudes=amplitudes,
+        kappas=kappas,
+    )
 
     return result
 
@@ -80,7 +80,7 @@ def fit_damped_cosine(
     with_post_fit: bool = True,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
-) -> RealResult:
+) -> DampedCosineResult:
     # since the signal is real, there are two exponential per term
     # since 2cos(x) = exp(ix) + exp(-ix)
 
@@ -104,7 +104,7 @@ def fit_damped_cosine(
             times, signal, offset, amplitudes, phases, ws, kappas
         )
     else:
-        result = RealResult(
+        result = DampedCosineResult(
             times=times,
             signal=signal,
             offset=offset,
@@ -123,7 +123,7 @@ def bicfit(
     n_modes: int = 1,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
-) -> (complex, np.ndarray[complex], np.ndarray[complex], np.ndarray[complex]):
+) -> Tuple[complex, np.ndarray[complex], np.ndarray[float], np.ndarray[float]]:
     """
     Fits a signal of the form s(t) = sum_k a_k exp(x_k t)
     using a pencil method.
@@ -140,7 +140,7 @@ def bicfit(
     if n_modes < 1:
         raise ValueError(f"Expected at least one mode to find, got {n_modes}")
 
-    if times.shape != signal.shape or len(times.shape) != 1:
+    if times.shape != signal.shape or times.ndim != 1:
         raise ValueError(
             f"Expected times and signal of shape (n,) but got them of shape {times.shape} and {signal.shape}"
         )
@@ -194,7 +194,7 @@ def _fit_amplitudes(
     times: np.ndarray[float],
     signal: np.ndarray[complex],
     n_modes: int,
-) -> (np.ndarray[complex], np.ndarray[complex], np.ndarray[complex]):
+) -> Tuple[np.ndarray[complex], np.ndarray[complex], np.ndarray[complex]]:
     N = len(times)
 
     # Vandermonde Matrix
@@ -222,7 +222,7 @@ def _match_real_modes(
     ws: np.ndarray[float],
     kappas: np.ndarray[float],
     tol: float,
-) -> (np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]):
+) -> Tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]]:
     n = len(amplitudes)
     assert len(amplitudes) == len(ws) == len(kappas)
     assert n % 2 == 0, "Expected an even number of modes to match real modes"

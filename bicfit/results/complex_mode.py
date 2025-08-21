@@ -21,7 +21,11 @@ class ComplexMode(Mode):
 
     def __call__(self, t: FloatLike) -> FloatLike:
         return _complex_exponential_model(
-            t, 0, np.array([self.complex_amplitude]), np.array([self.w]), np.array([self.kappa])
+            t,
+            0,
+            np.array([self.complex_amplitude]),
+            np.array([self.w]),
+            np.array([self.kappa]),
         )
 
 

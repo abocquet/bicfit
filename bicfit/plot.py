@@ -5,15 +5,15 @@ import numpy as np
 
 from matplotlib.axes._axes import Axes
 
-from .results import ComplexResult, ExponentialResult, RealResult
+from .results import ComplexResult, ExponentialDecayResult, DampedCosineResult
 from .types import FloatLike
 
 
 def plot(
-    result: ComplexResult | RealResult | ExponentialResult[FloatLike],
+    result: ComplexResult | DampedCosineResult | ExponentialDecayResult[FloatLike],
     axs: Axes | List[Axes] | None = None,
 ):
-    if np.iscomplexobj(result.signal):
+    if isinstance(result, (ComplexResult, ExponentialDecayResult[complex])):
         if axs is not None:
             if not isinstance(axs, (list, np.ndarray)):
                 raise TypeError(
@@ -24,15 +24,15 @@ def plot(
                     "Expected axs to contain exactly 3 Axes for complex plot"
                 )
 
-        _plot_complex(result, axs)
+        _plot_complex(result, axs)  # ty: ignore[invalid-argument-type]
     else:
         if axs is not None and not isinstance(axs, Axes):
             raise TypeError("Expected axs to be a matplotlib.axes.Axes or None")
-        _plot_real(result, axs)
+        _plot_real(result, axs)  # ty: ignore[invalid-argument-type]
 
 
 def _plot_complex(
-    result: ComplexResult | ExponentialResult[complex], axs: List[Axes] | None
+    result: ComplexResult | ExponentialDecayResult[complex], axs: List[Axes] | None
 ):
     if axs is None:
         _, axs = plt.subplots(1, 3, figsize=(15, 5))
@@ -69,7 +69,7 @@ def _plot_complex(
     axs[2].legend()
 
 
-def _plot_real(result: RealResult | ExponentialResult[float], ax: Axes | None):
+def _plot_real(result: DampedCosineResult | ExponentialDecayResult[float], ax: Axes | None):
     if ax is None:
         _, ax = plt.subplots()
 

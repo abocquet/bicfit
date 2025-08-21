@@ -7,18 +7,23 @@ from ..types import FloatLike
 
 
 @dataclass(eq=True, frozen=True)
-class RealMode(Mode):
+class DampedCosineMode(Mode):
     amplitude: float
     phase: float
 
     def __call__(self, t: FloatLike) -> FloatLike:
         return _damped_cosine_model(
-            t, 0.0, np.array([self.amplitude]), np.array([self.phase]), np.array([self.w]), np.array([self.kappa])
+            t,
+            0.0,
+            np.array([self.amplitude]),
+            np.array([self.phase]),
+            np.array([self.w]),
+            np.array([self.kappa]),
         )
 
 
 @dataclass
-class RealResult(Result):
+class DampedCosineResult(Result):
     offset: float
     amplitudes: np.ndarray[float]
     phases: np.ndarray[float]
@@ -26,9 +31,9 @@ class RealResult(Result):
     kappas: np.ndarray[float]
 
     @property
-    def modes(self) -> list[RealMode]:
+    def modes(self) -> list[DampedCosineMode]:
         return [
-            RealMode(amplitude=amplitude, phase=phase, w=w, kappa=kappa)
+            DampedCosineMode(amplitude=amplitude, phase=phase, w=w, kappa=kappa)
             for amplitude, phase, w, kappa in zip(
                 self.amplitudes, self.phases, self.ws, self.kappas
             )
@@ -40,4 +45,4 @@ class RealResult(Result):
         )
 
     def __repr__(self):
-        return f"RealResult(offset={self.offset}, modes={self.modes})"
+        return f"DampedCosineResult(offset={self.offset}, modes={self.modes})"

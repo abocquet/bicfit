@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.random import Generator, PCG64
 
-from bicfit import fit_exponential, ExponentialResult
+from bicfit import fit_exponential_decay, ExponentialDecayResult
 
 real_testdata = [
     (1.0, 0.05, 10.0, 150, 110),
@@ -29,9 +29,7 @@ def test_single_real_exponential(
     noise_vec = rng.normal(0, noise, n_points)
     signal = offset + amplitude * np.exp(-kappa * times) + noise_vec
 
-    result = fit_exponential(
-        times, signal, n_modes=1, with_post_fit=with_post_fit, is_complex=False
-    )
+    result = fit_exponential_decay(times, signal, n_modes=1, with_post_fit=with_post_fit, is_complex=False)
     try:
         assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
             "amplitude"
@@ -66,9 +64,7 @@ def test_single_complex_exponential(
     noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
     signal = offset + amplitude * np.exp(-kappa * times) + noise_vec
 
-    result = fit_exponential(
-        times, signal, n_modes=1, with_post_fit=with_post_fit, is_complex=True
-    )
+    result = fit_exponential_decay(times, signal, n_modes=1, with_post_fit=with_post_fit, is_complex=True)
     amp_est = result.modes[0].amplitude
 
     try:
@@ -106,9 +102,7 @@ def test_two_real_exponentials(with_post_fit, noise, tol):
         offset + a1 * np.exp(-kappa1 * times) + a2 * np.exp(-kappa2 * times) + noise_vec
     )
 
-    result = fit_exponential(
-        times, signal, n_modes=2, with_post_fit=with_post_fit, is_complex=False
-    )
+    result = fit_exponential_decay(times, signal, n_modes=2, with_post_fit=with_post_fit, is_complex=False)
 
     try:
         assert abs(result.modes[0].amplitude - a1) / abs(a1) < tol, "a1"
@@ -149,9 +143,7 @@ def test_two_complex_exponentials(with_post_fit, noise, tol):
         offset + a1 * np.exp(-kappa1 * times) + a2 * np.exp(-kappa2 * times) + noise_vec
     )
 
-    result = fit_exponential(
-        times, signal, n_modes=2, with_post_fit=with_post_fit, is_complex=True
-    )
+    result = fit_exponential_decay(times, signal, n_modes=2, with_post_fit=with_post_fit, is_complex=True)
     try:
         assert abs(result.modes[0].amplitude - a1) / abs(a1) < tol, "a1"
         assert abs(result.modes[0].kappa - kappa1) / kappa1 < tol, "kappa1"
@@ -174,7 +166,7 @@ def test_two_complex_exponentials(with_post_fit, noise, tol):
 
 
 def test_individual_mode():
-    result = ExponentialResult(
+    result = ExponentialDecayResult(
         0.0,
         np.array([0.0, 1.0]),
         np.array([1.0, 2.0]),
@@ -184,6 +176,10 @@ def test_individual_mode():
 
     t = np.linspace(0, 10, 11)
     assert result(t).shape == (11,)
-    assert np.allclose(result(t), result.modes[0](t) +  result.modes[1](t) +  result.modes[2](t))
+    assert np.allclose(
+        result(t), result.modes[0](t) + result.modes[1](t) + result.modes[2](t)
+    )
     assert result(0.0).shape == tuple()
-    assert np.isclose(result(0.0),  result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0) )
+    assert np.isclose(
+        result(0.0), result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0)
+    )

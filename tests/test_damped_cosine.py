@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.random import PCG64, Generator
 
-from bicfit import fit_damped_cosine, RealResult
+from bicfit import fit_damped_cosine, DampedCosineResult
 
 testdata = [
     (1.0, 0.2, 0.05, np.pi / 2, 10.0, 150, 110),
@@ -101,7 +101,7 @@ def test_two_damped_cosines(with_post_fit, noise, tol):
 
 
 def test_individual_mode():
-    result = RealResult(
+    result = DampedCosineResult(
         offset=0.0,
         times=np.array([0.0, 1.0]),
         signal=np.array([2.0, 3.0]),
@@ -114,6 +114,10 @@ def test_individual_mode():
     t = np.linspace(0, 10, 11)
     np.set_printoptions(linewidth=1000)
     assert result(t).shape == (11,)
-    assert np.allclose(result(t), result.modes[0](t) +  result.modes[1](t) +  result.modes[2](t))
+    assert np.allclose(
+        result(t), result.modes[0](t) + result.modes[1](t) + result.modes[2](t)
+    )
     assert result(0.0).shape == tuple()
-    assert np.isclose(result(0.0),  result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0) )
+    assert np.isclose(
+        result(0.0), result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0)
+    )

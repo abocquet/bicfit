@@ -30,7 +30,9 @@ def _exponential_model(
     kappas: np.ndarray[float],
 ) -> np.ndarray[FloatLike]:
     t = np.array(t)
-    return offset + np.sum(amplitudes[:, None] * np.exp(-kappas[:, None] * t), axis=0).reshape(t.shape)
+    return offset + np.sum(
+        amplitudes[:, None] * np.exp(-kappas[:, None] * t), axis=0
+    ).reshape(t.shape)
 
 
 def _damped_cosine_model(
@@ -43,6 +45,8 @@ def _damped_cosine_model(
 ) -> np.ndarray[float]:
     t = np.array(t)
     return offset + np.sum(
-        amplitudes[:, None] * np.cos(phases[:,None] + ws[:, None] * t) * np.exp(-kappas[:, None] * t),
+        amplitudes[:, None]
+        * np.cos(phases[:, None] + ws[:, None] * t)
+        * np.exp(-kappas[:, None] * t),
         axis=0,
     ).reshape(t.shape)
