@@ -19,12 +19,34 @@ def fit_complex_exponential(
     tol: float = 1e-3,
     L_fraction: float = 0.3,
 ) -> ComplexResult:
-    offset, amplitudes, ws, kappas = bicfit(
+    r"""
+    Fits a complex exponential signal of the form
+    $f(t) = x_0 + \sum_k A_k \exp((j\omega_k - \kappa_k) t)$
+
+    :param times: np.ndarray[float]
+        The time points at which the signal is sampled.
+    :param signal: np.ndarray[complex]
+        The complex signal to fit.
+    :param n_modes: int
+        The number of modes to fit. Each mode corresponds to a complex exponential term.
+    :param with_post_fit: bool
+        Whether to perform a post-fit refinement of the parameters, using least-square error minimization.
+        This is recommended to improve the accuracy of the fit.
+    :param tol: float
+        The tolerance for the fitting process. It is used to determine the convergence of the fit.
+    :param L_fraction: float
+        The fraction of the signal length to use for the pencil method. Usually a value between 1/3 and 1/2 is
+        recommended
+    :return:
+    """
+
+
+    offset, amplitudes, pulsations, decay_rates = bicfit(
         times, signal, n_modes=n_modes, tol=tol, L_fraction=L_fraction
     )
     if with_post_fit:
-        offset, amplitudes, ws, kappas = _post_fit_complex_exponential(
-            times, signal, offset, amplitudes, ws, kappas
+        offset, amplitudes, pulsations, decay_rates = _post_fit_complex_exponential(
+            times, signal, offset, amplitudes, pulsations, decay_rates
         )
 
     return ComplexResult(
@@ -32,8 +54,8 @@ def fit_complex_exponential(
         signal=signal,
         offset=offset,
         amplitudes=amplitudes,
-        ws=ws,
-        kappas=kappas,
+        pulsations=pulsations,
+        decay_rates=decay_rates,
     )
 
 
@@ -46,7 +68,27 @@ def fit_exponential_decay(
     tol: float = 1e-3,
     L_fraction: float = 0.3,
 ) -> ExponentialDecayResult:
-    offset, amplitudes, ws, kappas = bicfit(
+    r""" Fits an exponential decay signal of the form
+    $f(t) = x_0 + \sum_k A_k \exp(-\kappa_k t)$
+
+    :param times: np.ndarray[float]
+        The time points at which the signal is sampled.
+    :param signal: np.ndarray[float | complex]
+        The signal to fit. It can be real or complex.
+    :param n_modes: int
+        The number of modes to fit. Each mode corresponds to an exponential decay term.
+    :param with_post_fit: bool
+        Whether to perform a post-fit refinement of the parameters, using least-square error minimization.
+        This is recommended to improve the accuracy of the fit.
+    :param is_complex: bool
+        Whether the signal is complex. If True, the with will take the $(A_k)$ complex, and real otherwise.
+    :param tol: float
+        The tolerance for the fitting process. It is used to determine the convergence of the fit.
+    :param L_fraction: float
+        The fraction of the signal length to use for the pencil method. Usually a value between 1/3 and 1/2 is
+        recommended.
+    """
+    offset, amplitudes, pulsations, decay_rates = bicfit(
         times,
         signal,
         n_modes=n_modes,
@@ -54,8 +96,8 @@ def fit_exponential_decay(
         L_fraction=L_fraction,
     )
     if with_post_fit:
-        offset, amplitudes, kappas = _post_fit_exponential(
-            times, signal, offset, amplitudes, kappas, is_complex
+        offset, amplitudes, decay_rates = _post_fit_exponential(
+            times, signal, offset, amplitudes, decay_rates, is_complex
         )
     else:
         if not is_complex:
@@ -67,7 +109,7 @@ def fit_exponential_decay(
         signal=signal,
         offset=offset,
         amplitudes=amplitudes,
-        kappas=kappas,
+        decay_rates=decay_rates,
     )
 
     return result
@@ -81,10 +123,30 @@ def fit_damped_cosine(
     tol: float = 1e-3,
     L_fraction: float = 0.3,
 ) -> DampedCosineResult:
+    r"""
+    Fits a damped cosine signal of the form
+    $f(t) = x_0 + \sum_k A_k \exp(-\kappa_k t) \cos(\omega_k t + \phi_k)$
+
+    :param times: np.ndarray[float]
+        The time points at which the signal is sampled.
+    :param signal: np.ndarray[float]
+        The real signal to fit.
+    :param n_modes: int
+        The number of modes to fit. Each mode corresponds to a damped cosine term.
+    :param with_post_fit: bool
+        Whether to perform a post-fit refinement of the parameters, using least-square error minimization.
+        This is recommended to improve the accuracy of the fit.
+    :param tol: float
+        The tolerance for the fitting process. It is used to determine the convergence of the fit.
+    :param L_fraction: float
+        The fraction of the signal length to use for the pencil method. Usually a value between 1/3 and 1/2 is
+        recommended.
+    :return:
+    """
     # since the signal is real, there are two exponential per term
     # since 2cos(x) = exp(ix) + exp(-ix)
 
-    offset, amplitudes, ws, kappas = bicfit(
+    offset, amplitudes, pulsations, decay_rates = bicfit(
         times,
         signal,
         n_modes=2 * n_modes,
@@ -92,7 +154,7 @@ def fit_damped_cosine(
         L_fraction=L_fraction,
     )
 
-    amplitudes, phases, ws, kappas = _match_real_modes(amplitudes, ws, kappas, tol=tol)
+    amplitudes, phases, pulsations, decay_rates = _match_real_modes(amplitudes, pulsations, decay_rates, tol=tol)
     if abs(offset.imag) > tol:
         raise RuntimeError(
             f"Expected the offset to be real, but got {offset.imag} imaginary part, above fixed tolerance {tol}"
@@ -101,7 +163,7 @@ def fit_damped_cosine(
 
     if with_post_fit:
         result = _post_fit_damped_cosine(
-            times, signal, offset, amplitudes, phases, ws, kappas
+            times, signal, offset, amplitudes, phases, pulsations, decay_rates
         )
     else:
         result = DampedCosineResult(
@@ -110,8 +172,8 @@ def fit_damped_cosine(
             offset=offset,
             amplitudes=amplitudes,
             phases=phases,
-            ws=ws,
-            kappas=kappas,
+            pulsations=pulsations,
+            decay_rates=decay_rates,
         )
 
     return result
@@ -126,13 +188,14 @@ def bicfit(
 ) -> Tuple[complex, np.ndarray[complex], np.ndarray[float], np.ndarray[float]]:
     """
     Fits a signal of the form s(t) = sum_k a_k exp(x_k t)
-    using a pencil method.
+    using a pencil method. This method is exposed for advanced users
+    who want to use it directly, but it is recommended to use the
+    `fit_complex_exponential`, `fit_exponential_decay` or
+    `fit_damped_cosine` functions instead.
 
     The algorithm is taken from
-
     **Generalized Pencil-of-Function Method for Extracting Poles
     of an EM System from Its Transient Response**
-
     from Hua and Sarkar (IEEE TRANSACTIONS ON ANTENNAS
     AND PROPAGATION, VOL. 37, NO. 2, FEBRUARY 1989)
     """
@@ -178,15 +241,15 @@ def bicfit(
     Y1_inv = np.linalg.pinv(Y1)
     eigenvalues = np.linalg.eigvals(Y1_inv @ Y2)
 
-    amplitudes, ws, kappas = _fit_amplitudes(eigenvalues, times, signal, cutoff_idx)
-    constant_mode_idx = np.argmin(abs(np.exp(1j * ws - kappas) - 1))
+    amplitudes, pulsations, decay_rates = _fit_amplitudes(eigenvalues, times, signal, cutoff_idx)
+    constant_mode_idx = np.argmin(abs(np.exp(1j * pulsations - decay_rates) - 1))
 
     offset = amplitudes[constant_mode_idx] - offset
     amplitudes = np.delete(amplitudes, constant_mode_idx)
-    ws = np.delete(ws, constant_mode_idx)
-    kappas = np.delete(kappas, constant_mode_idx)
+    pulsations = np.delete(pulsations, constant_mode_idx)
+    decay_rates = np.delete(decay_rates, constant_mode_idx)
 
-    return offset, amplitudes, ws, kappas
+    return offset, amplitudes, pulsations, decay_rates
 
 
 def _fit_amplitudes(
@@ -211,26 +274,26 @@ def _fit_amplitudes(
     coefficients = np.linalg.lstsq(V, signal, rcond=None)[0]
 
     dt = np.diff(times)[0]
-    ws = np.angle(eigenvalues) / dt
-    kappas = -np.log(np.abs(eigenvalues)) / dt
+    pulsations = np.angle(eigenvalues) / dt
+    decay_rates = -np.log(np.abs(eigenvalues)) / dt
 
-    return coefficients, ws, kappas
+    return coefficients, pulsations, decay_rates
 
 
 def _match_real_modes(
     amplitudes: np.ndarray[complex],
-    ws: np.ndarray[float],
-    kappas: np.ndarray[float],
+    pulsations: np.ndarray[float],
+    decay_rates: np.ndarray[float],
     tol: float,
 ) -> Tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]]:
     n = len(amplitudes)
-    assert len(amplitudes) == len(ws) == len(kappas)
+    assert len(amplitudes) == len(pulsations) == len(decay_rates)
     assert n % 2 == 0, "Expected an even number of modes to match real modes"
 
-    normalized_frequency = 1j * abs(ws) + kappas
+    normalized_frequency = 1j * abs(pulsations) + decay_rates
 
     # step 1: separate frequencies that are in the upper and lower complex plane
-    positive_w_indices, negative_w_indices = np.where(ws > 0)[0], np.where(ws < 0)[0]
+    positive_w_indices, negative_w_indices = np.where(pulsations > 0)[0], np.where(pulsations < 0)[0]
 
     # step 2: get their normalized frequencies, i.e. mapped to the upper plane
     positive_w_normalized_frequencies = normalized_frequency[positive_w_indices]
@@ -247,21 +310,21 @@ def _match_real_modes(
     )
 
     # step 4: use the linear sum assignment to find the best matching pairs
-    # and store the initial indices (ie of amplitudes, ws, kappas) in idx_1 and idx_2
+    # and store the initial indices (ie of amplitudes, pulsations, decay_rates) in idx_1 and idx_2
     row_indices, col_indices = linear_sum_assignment(cost)
     idx_1, idx_2 = positive_w_indices[row_indices], negative_w_indices[col_indices]
 
     # step 5: check if the pairs are valid, i.e. they have close frequencies, decay rates and amplitudes
-    if np.any(abs(ws[idx_1] - (-ws[idx_2])) > tol):
+    if np.any(abs(pulsations[idx_1] - (-pulsations[idx_2])) > tol):
         raise RuntimeError(
             f"All real modes frequencies are expected to have close frequencies "
-            f"(within {tol}) but got two paired modes with pulsations {ws[idx_1]} and {ws[idx_2]}"
+            f"(within {tol}) but got two paired modes with pulsations {pulsations[idx_1]} and {pulsations[idx_2]}"
         )
 
-    if np.any(abs(kappas[idx_1] - kappas[idx_2]) > tol):
+    if np.any(abs(decay_rates[idx_1] - decay_rates[idx_2]) > tol):
         raise RuntimeError(
             f"All real modes frequencies are expected to have close decay rates "
-            f"(within {tol}) but got two paired modes with decay rates {kappas[idx_1]} and {kappas[idx_2]}"
+            f"(within {tol}) but got two paired modes with decay rates {decay_rates[idx_1]} and {decay_rates[idx_2]}"
         )
 
     if np.any(abs(amplitudes[idx_1] - np.conj(amplitudes[idx_2])) > tol):
@@ -272,11 +335,11 @@ def _match_real_modes(
         )
 
     # step 6: create the real modes from the matched pairs
-    real_ws = np.mean([ws[idx_1], -ws[idx_2]], axis=0).real
-    real_kappas = np.mean([kappas[idx_1], kappas[idx_2]], axis=0).real
+    real_pulsations = np.mean([pulsations[idx_1], -pulsations[idx_2]], axis=0).real
+    real_decay_rates = np.mean([decay_rates[idx_1], decay_rates[idx_2]], axis=0).real
     real_amplitudes = np.abs([amplitudes[idx_1], amplitudes[idx_2]]).sum(axis=0).real
     real_phases = np.mean(
         [np.angle(amplitudes[idx_1]), -np.angle(amplitudes[idx_2])], axis=0
     ).real
 
-    return real_amplitudes, real_phases, real_ws, real_kappas
+    return real_amplitudes, real_phases, real_pulsations, real_decay_rates

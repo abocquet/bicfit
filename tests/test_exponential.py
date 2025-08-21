@@ -16,67 +16,67 @@ complex_testdata = [
 ]
 
 
-@pytest.mark.parametrize("amplitude, kappa, offset, horizon, n_points", real_testdata)
+@pytest.mark.parametrize("amplitude, decay_rate, offset, horizon, n_points", real_testdata)
 @pytest.mark.parametrize(
     "with_post_fit,noise,tol",
     [(False, 0, 0.02), (False, 0.05, 0.2), (True, 0, 0.02), (True, 0.05, 0.1)],
 )
 def test_single_real_exponential(
-    amplitude, kappa, offset, horizon, n_points, with_post_fit, noise, tol
+    amplitude, decay_rate, offset, horizon, n_points, with_post_fit, noise, tol
 ):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
     noise_vec = rng.normal(0, noise, n_points)
-    signal = offset + amplitude * np.exp(-kappa * times) + noise_vec
+    signal = offset + amplitude * np.exp(-decay_rate * times) + noise_vec
 
     result = fit_exponential_decay(times, signal, n_modes=1, with_post_fit=with_post_fit, is_complex=False)
     try:
         assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
             "amplitude"
         )
-        assert abs(result.modes[0].kappa - kappa) / kappa < tol, "kappa"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed = e.args[0]
         print(
             f"Failed estimating '{failed}' for real exponential:\n"
-            f"- amplitude true={amplitude} got={result.modes[0].amplitude}\n"
-            f"- kappa     true={kappa} got={result.modes[0].kappa}\n"
-            f"- offset    true={offset} got={result.offset}\n"
-            f"- horizon   = {horizon}\n"
-            f"- n_points  = {n_points}"
+            f"- amplitude true  = {amplitude} got={result.modes[0].amplitude}\n"
+            f"- decay_rate true = {decay_rate} got={result.modes[0].decay_rate}\n"
+            f"- offset true     = {offset} got={result.offset}\n"
+            f"- horizon         = {horizon}\n"
+            f"- n_points        = {n_points}"
         )
         raise e
 
 
 @pytest.mark.parametrize(
-    "amplitude, kappa, offset, horizon, n_points", complex_testdata
+    "amplitude, decay_rate, offset, horizon, n_points", complex_testdata
 )
 @pytest.mark.parametrize(
     "with_post_fit, noise,tol",
     [(False, 0, 0.03), (False, 0.05, 0.2), (True, 0, 0.03), (True, 0.05, 0.1)],
 )
 def test_single_complex_exponential(
-    amplitude, kappa, offset, horizon, n_points, with_post_fit, noise, tol
+    amplitude, decay_rate, offset, horizon, n_points, with_post_fit, noise, tol
 ):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
     noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
-    signal = offset + amplitude * np.exp(-kappa * times) + noise_vec
+    signal = offset + amplitude * np.exp(-decay_rate * times) + noise_vec
 
     result = fit_exponential_decay(times, signal, n_modes=1, with_post_fit=with_post_fit, is_complex=True)
     amp_est = result.modes[0].amplitude
 
     try:
         assert abs(abs(amp_est) - abs(amplitude)) / abs(amplitude) < tol, "amplitude"
-        assert abs(result.modes[0].kappa - kappa) / kappa < tol, "kappa"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed = e.args[0]
         print(
             f"Failed estimating '{failed}' for complex exponential:\n"
             f"- amplitude true={amplitude} got={amp_est}\n"
-            f"- kappa     true={kappa} got={result.modes[0].kappa}\n"
+            f"- decay_rate     true={decay_rate} got={result.modes[0].decay_rate}\n"
             f"- offset    true={offset} got={result.offset}\n"
             f"- horizon   = {horizon}\n"
             f"- n_points  = {n_points}"
@@ -96,31 +96,31 @@ def test_two_real_exponentials(with_post_fit, noise, tol):
 
     offset = 4.5
     a1, a2 = 0.6, 1.0
-    kappa1, kappa2 = 0.01, 0.1
+    decay_rate1, decay_rate2 = 0.01, 0.1
 
     signal = (
-        offset + a1 * np.exp(-kappa1 * times) + a2 * np.exp(-kappa2 * times) + noise_vec
+        offset + a1 * np.exp(-decay_rate1 * times) + a2 * np.exp(-decay_rate2 * times) + noise_vec
     )
 
     result = fit_exponential_decay(times, signal, n_modes=2, with_post_fit=with_post_fit, is_complex=False)
 
     try:
         assert abs(result.modes[0].amplitude - a1) / abs(a1) < tol, "a1"
-        assert abs(result.modes[0].kappa - kappa1) / kappa1 < tol, "kappa1"
+        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, "decay_rate1"
 
         assert abs(result.modes[1].amplitude - a2) / abs(a2) < tol, "a2"
-        assert abs(result.modes[1].kappa - kappa2) / kappa2 < tol, "kappa2"
+        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, "decay_rate2"
 
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed_test = e.args[0].split("\n")[0]
         print(
             f"Failed estimating '{failed_test}' for \n"
-            f"- amplitude 1 = {result.modes[0].amplitude}\n"
-            f"- kappa 1     = {result.modes[0].kappa})\n"
-            f"- amplitude 2 = {result.modes[1].amplitude}\n"
-            f"- kappa 2     = {result.modes[1].kappa})\n"
-            f"- offset      = {result.offset})\n"
+            f"- amplitude 1  = {result.modes[0].amplitude}\n"
+            f"- decay_rate 1 = {result.modes[0].decay_rate})\n"
+            f"- amplitude 2  = {result.modes[1].amplitude}\n"
+            f"- decay_rate 2 = {result.modes[1].decay_rate})\n"
+            f"- offset       = {result.offset})\n"
         )
         raise e
 
@@ -137,30 +137,30 @@ def test_two_complex_exponentials(with_post_fit, noise, tol):
 
     offset = 4.5 + 2.2j
     a1, a2 = 1.0 + 0.2j, 0.6 - 0.1j
-    kappa1, kappa2 = 0.02, 0.1
+    decay_rate1, decay_rate2 = 0.02, 0.1
 
     signal = (
-        offset + a1 * np.exp(-kappa1 * times) + a2 * np.exp(-kappa2 * times) + noise_vec
+        offset + a1 * np.exp(-decay_rate1 * times) + a2 * np.exp(-decay_rate2 * times) + noise_vec
     )
 
     result = fit_exponential_decay(times, signal, n_modes=2, with_post_fit=with_post_fit, is_complex=True)
     try:
         assert abs(result.modes[0].amplitude - a1) / abs(a1) < tol, "a1"
-        assert abs(result.modes[0].kappa - kappa1) / kappa1 < tol, "kappa1"
+        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, "decay_rate1"
 
         assert abs(result.modes[1].amplitude - a2) / abs(a2) < tol, "a2"
-        assert abs(result.modes[1].kappa - kappa2) / kappa2 < tol, "kappa2"
+        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, "decay_rate2"
 
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed_test = e.args[0].split("\n")[0]
         print(
             f"Failed estimating '{failed_test}' for \n"
-            f"- amplitude 1 = {result.modes[0].amplitude}\n"
-            f"- kappa 1     = {result.modes[0].kappa})\n"
-            f"- amplitude 2 = {result.modes[1].amplitude}\n"
-            f"- kappa 2     = {result.modes[1].kappa})\n"
-            f"- offset      = {result.offset})\n"
+            f"- amplitude 1  = {result.modes[0].amplitude}\n"
+            f"- decay_rate 1 = {result.modes[0].decay_rate})\n"
+            f"- amplitude 2  = {result.modes[1].amplitude}\n"
+            f"- decay_rate 2 = {result.modes[1].decay_rate})\n"
+            f"- offset       = {result.offset})\n"
         )
         raise e
 

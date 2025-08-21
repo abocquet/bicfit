@@ -13,12 +13,12 @@ def _complex_exponential_model(
     t: float | np.ndarray[float],
     offset: complex,
     amplitudes: np.ndarray[complex],
-    ws: np.ndarray[float],
-    kappas: np.ndarray[float],
+    pulsations: np.ndarray[float],
+    decay_rates: np.ndarray[float],
 ) -> np.ndarray[complex]:
     t = np.array(t)
     return offset + np.sum(
-        amplitudes[:, None] * np.exp((1j * ws[:, None] - kappas[:, None]) * t),
+        amplitudes[:, None] * np.exp((1j * pulsations[:, None] - decay_rates[:, None]) * t),
         axis=0,
     ).reshape(t.shape)
 
@@ -27,11 +27,11 @@ def _exponential_model(
     t: float | np.ndarray[float],
     offset: complex,
     amplitudes: np.ndarray[FloatLike],
-    kappas: np.ndarray[float],
+    decay_rates: np.ndarray[float],
 ) -> np.ndarray[FloatLike]:
     t = np.array(t)
     return offset + np.sum(
-        amplitudes[:, None] * np.exp(-kappas[:, None] * t), axis=0
+        amplitudes[:, None] * np.exp(-decay_rates[:, None] * t), axis=0
     ).reshape(t.shape)
 
 
@@ -40,13 +40,13 @@ def _damped_cosine_model(
     offset: float,
     amplitudes: np.ndarray[float],
     phases: np.ndarray[float],
-    ws: np.ndarray[float],
-    kappas: np.ndarray[float],
+    pulsations: np.ndarray[float],
+    decay_rates: np.ndarray[float],
 ) -> np.ndarray[float]:
     t = np.array(t)
     return offset + np.sum(
         amplitudes[:, None]
-        * np.cos(phases[:, None] + ws[:, None] * t)
-        * np.exp(-kappas[:, None] * t),
+        * np.cos(phases[:, None] + pulsations[:, None] * t)
+        * np.exp(-decay_rates[:, None] * t),
         axis=0,
     ).reshape(t.shape)

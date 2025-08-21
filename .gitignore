@@ -4,3 +4,7 @@
 *.ipynb
 uv.lock
 *.pyc
+.DS_Store
+__pycache__
+*.egg-info
+*.egg

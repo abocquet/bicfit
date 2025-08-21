@@ -24,33 +24,37 @@ class ComplexMode(Mode):
             t,
             0,
             np.array([self.complex_amplitude]),
-            np.array([self.w]),
-            np.array([self.kappa]),
+            np.array([self.pulsation]),
+            np.array([self.decay_rate]),
         )
 
 
 @dataclass
 class ComplexResult(Result):
     amplitudes: np.ndarray[complex]
-    ws: np.ndarray[float]
-    kappas: np.ndarray[float]
+    pulsations: np.ndarray[float]
+    decay_rates: np.ndarray[float]
 
     def __post_init__(self):
-        order = np.argsort(self.kappas)
+        order = np.argsort(self.decay_rates)
         self.amplitudes = self.amplitudes[order]
-        self.ws = self.ws[order]
-        self.kappas = self.kappas[order]
+        self.pulsations = self.pulsations[order]
+        self.decay_rates = self.decay_rates[order]
 
     @property
     def modes(self) -> List[ComplexMode]:
         return [
-            ComplexMode(complex_amplitude=amplitude, w=w, kappa=kappa)
-            for amplitude, w, kappa in zip(self.amplitudes, self.ws, self.kappas)
+            ComplexMode(complex_amplitude=amplitude, pulsation=pulsation, decay_rate=decay_rate)
+            for amplitude, pulsation, decay_rate in zip(self.amplitudes, self.pulsations, self.decay_rates)
         ]
+
+    @property
+    def frequencies(self) -> np.ndarray[float]:
+        return self.pulsations / (2 * np.pi)
 
     def __call__(self, t: FloatLike) -> np.ndarray[complex]:
         return _complex_exponential_model(
-            t, self.offset, self.amplitudes, self.ws, self.kappas
+            t, self.offset, self.amplitudes, self.pulsations, self.decay_rates
         )
 
     def __repr__(self):
@@ -58,7 +62,7 @@ class ComplexResult(Result):
 
     def pretty_repr(self):
         if len(self.amplitudes) == 1:
-            return f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j, amplitude = {self.amplitudes[0].real:0.2e}+{self.amplitudes[0].imag:0.2e}j,  w = {self.ws[0]:0.2e}, kappa = {self.kappas[0]:0.2e}"
+            return f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j, amplitude = {self.amplitudes[0].real:0.2e}+{self.amplitudes[0].imag:0.2e}j,  pulsation = {self.pulsations[0]:0.2e}, decay_rate = {self.decay_rates[0]:0.2e}"
         else:
             return f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j, {len(self.amplitudes)} modes"
 

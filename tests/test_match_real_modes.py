@@ -6,20 +6,20 @@ from bicfit import _match_real_modes
 
 def test_match_real_modes_happy_path():
     amplitudes = np.array([1 + 2j, 1 - 2j, 3 + 4j, 3 - 4j, 5 + 6j, 5 - 6j])
-    ws = np.array([10.0, -10.0, 20.0, -20.0, 30.0, -30.0])
-    kappas = np.array([5.0, 5.0, 7.0, 7.0, 9.0, 9.0])
+    pulsations = np.array([10.0, -10.0, 20.0, -20.0, 30.0, -30.0])
+    decay_rates = np.array([5.0, 5.0, 7.0, 7.0, 9.0, 9.0])
     tol = 1e-9
 
-    real_amplitudes, real_phases, real_ws, real_kappas = _match_real_modes(
-        amplitudes, ws, kappas, tol
+    real_amplitudes, real_phases, real_pulsations, real_decay_rates = _match_real_modes(
+        amplitudes, pulsations, decay_rates, tol
     )
 
-    assert real_ws.shape == (3,)
-    assert real_kappas.shape == (3,)
+    assert real_pulsations.shape == (3,)
+    assert real_decay_rates.shape == (3,)
     assert real_phases.shape == (3,)
 
-    assert np.allclose(real_ws, [10.0, 20.0, 30.0])
-    assert np.allclose(real_kappas, [5.0, 7.0, 9.0])
+    assert np.allclose(real_pulsations, [10.0, 20.0, 30.0])
+    assert np.allclose(real_decay_rates, [5.0, 7.0, 9.0])
 
     expected_phases = [np.angle(1 + 2j), np.angle(3 + 4j), np.angle(5 + 6j)]
     assert np.allclose(real_phases, expected_phases)
@@ -33,26 +33,26 @@ def test_match_real_modes_happy_path():
 def test_match_real_modes_frequency_mismatch():
     amplitudes = np.array([1 + 2j, 3 + 4j, 1 - 2j, 3 - 4j])
 
-    ws = np.array([10.0, 20.0, -10.01, -20.0])
-    kappas = np.array([5.0, 7.0, 5.0, 7.0])
+    pulsations = np.array([10.0, 20.0, -10.01, -20.0])
+    decay_rates = np.array([5.0, 7.0, 5.0, 7.0])
     tol = 1e-3
     with pytest.raises(RuntimeError):
-        _match_real_modes(amplitudes, ws, kappas, tol)
+        _match_real_modes(amplitudes, pulsations, decay_rates, tol)
 
 
-def test_match_real_modes_kappa_mismatch():
+def test_match_real_modes_decay_rate_mismatch():
     amplitudes = np.array([1 + 2j, 3 + 4j, 1 - 2j, 3 - 4j])
-    ws = np.array([10.0, 20.0, -10.0, -20.0])
-    kappas = np.array([5.0, 7.0, 5.002, 7.0])
+    pulsations = np.array([10.0, 20.0, -10.0, -20.0])
+    decay_rates = np.array([5.0, 7.0, 5.002, 7.0])
     tol = 1e-3
     with pytest.raises(RuntimeError):
-        _match_real_modes(amplitudes, ws, kappas, tol)
+        _match_real_modes(amplitudes, pulsations, decay_rates, tol)
 
 
 def test_match_real_modes_amplitude_mismatch():
     amplitudes = np.array([1 + 2j, 3 + 4j, 1 - 2.01j, 3 - 4j])
-    ws = np.array([10.0, 20.0, -10.0, -20.0])
-    kappas = np.array([5.0, 7.0, 5.0, 7.0])
+    pulsations = np.array([10.0, 20.0, -10.0, -20.0])
+    decay_rates = np.array([5.0, 7.0, 5.0, 7.0])
     tol = 5e-3
     with pytest.raises(RuntimeError):
-        _match_real_modes(amplitudes, ws, kappas, tol)
+        _match_real_modes(amplitudes, pulsations, decay_rates, tol)

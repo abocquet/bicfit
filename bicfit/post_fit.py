@@ -31,14 +31,14 @@ def _complex_exponential_adapter(t: np.ndarray[float], x: np.ndarray[FloatLike])
     offset_re, offset_im, modes = x[0], x[1], x[2:].reshape(-1, 4)
     offset = offset_re + 1j * offset_im
 
-    amplitudes_re, amplitudes_im, ws, kappas = (
+    amplitudes_re, amplitudes_im, pulsations, decay_rates = (
         modes[:, 0],
         modes[:, 1],
         modes[:, 2],
         modes[:, 3],
     )
     amplitudes = amplitudes_re + 1j * amplitudes_im
-    return _complex_exponential_model(t, offset, amplitudes, ws, kappas)
+    return _complex_exponential_model(t, offset, amplitudes, pulsations, decay_rates)
 
 
 def _post_fit_complex_exponential(
@@ -46,17 +46,17 @@ def _post_fit_complex_exponential(
     signal: np.ndarray,
     offset: complex,
     amplitudes: np.ndarray[complex],
-    ws: np.ndarray[float],
-    kappas: np.ndarray[float],
+    pulsations: np.ndarray[float],
+    decay_rates: np.ndarray[float],
 ) -> Tuple[complex, np.ndarray[complex], np.ndarray[float], np.ndarray[float]]:
-    assert len(amplitudes) == len(ws) == len(kappas)
+    assert len(amplitudes) == len(pulsations) == len(decay_rates)
 
     cost = ft.partial(
         _cost, times=times, signal=signal, model=_complex_exponential_adapter
     )
 
     x0 = [offset.real, offset.imag]
-    x1 = np.stack((amplitudes.real, amplitudes.imag, ws, kappas)).T.flatten()
+    x1 = np.stack((amplitudes.real, amplitudes.imag, pulsations, decay_rates)).T.flatten()
     x0 = np.concatenate((x0, x1))
 
     bounds = [NO_BOUND, NO_BOUND]  # No bounds for offset
@@ -64,10 +64,10 @@ def _post_fit_complex_exponential(
 
     xopt = minimize(cost, x0, bounds=bounds).x
     offset = xopt[0] + 1j * xopt[1]
-    amplitudes_re, amplitudes_im, ws, kappas = xopt[2:].reshape(-1, 4).T
+    amplitudes_re, amplitudes_im, pulsations, decay_rates = xopt[2:].reshape(-1, 4).T
     amplitudes = amplitudes_re + 1j * amplitudes_im
 
-    return offset, amplitudes, ws, kappas
+    return offset, amplitudes, pulsations, decay_rates
 
 
 # =====================================================================================================================
@@ -81,14 +81,14 @@ def _exponential_adapter(
     if is_complex:
         offset = complex(x[0] + 1j * x[1])
         modes = x[2:].reshape(-1, 3)
-        amplitudes_re, amplitudes_im, kappas = modes[:, 0], modes[:, 1], modes[:, 2]
+        amplitudes_re, amplitudes_im, decay_rates = modes[:, 0], modes[:, 1], modes[:, 2]
         amplitudes = amplitudes_re + 1j * amplitudes_im
     else:
         offset = complex(x[0])
         modes = x[1:].reshape(-1, 2)
-        amplitudes, kappas = modes[:, 0], modes[:, 1]
+        amplitudes, decay_rates = modes[:, 0], modes[:, 1]
 
-    return _exponential_model(t, offset, amplitudes, kappas)
+    return _exponential_model(t, offset, amplitudes, decay_rates)
 
 
 def _post_fit_exponential(
@@ -96,10 +96,10 @@ def _post_fit_exponential(
     signal: np.ndarray,
     offset: complex,
     amplitudes: np.ndarray[complex],
-    kappas: np.ndarray[complex],
+    decay_rates: np.ndarray[complex],
     is_complex: bool,
 ) -> Tuple[FloatLike, np.ndarray[FloatLike], np.ndarray[FloatLike]]:
-    assert len(amplitudes) == len(kappas)
+    assert len(amplitudes) == len(decay_rates)
 
     cost = ft.partial(
         _cost,
@@ -110,7 +110,7 @@ def _post_fit_exponential(
 
     if is_complex:
         x0 = [offset.real, offset.imag]
-        x1 = np.stack((amplitudes.real, amplitudes.imag, kappas)).T.flatten()
+        x1 = np.stack((amplitudes.real, amplitudes.imag, decay_rates)).T.flatten()
         x0 = np.concatenate((x0, x1))
 
         bounds = [NO_BOUND, NO_BOUND] + [NO_BOUND, NO_BOUND, POSITIVE_BOUND] * len(
@@ -118,7 +118,7 @@ def _post_fit_exponential(
         )
     else:
         x0 = [offset.real]
-        x1 = np.stack((amplitudes.real, kappas)).T.flatten()
+        x1 = np.stack((amplitudes.real, decay_rates)).T.flatten()
         x0 = np.concatenate((x0, x1))
         bounds = [NO_BOUND] + [NO_BOUND, POSITIVE_BOUND] * len(amplitudes)
 
@@ -127,13 +127,13 @@ def _post_fit_exponential(
     xopt = minimize(cost, x0, bounds=bounds).x
     if is_complex:
         offset = xopt[0] + 1j * xopt[1]
-        amplitudes_re, amplitudes_im, kappas = xopt[2:].reshape(-1, 3).T
+        amplitudes_re, amplitudes_im, decay_rates = xopt[2:].reshape(-1, 3).T
         amplitudes = amplitudes_re + 1j * amplitudes_im
     else:
         offset = xopt[0]
-        amplitudes, kappas = xopt[1:].reshape(-1, 2).T
+        amplitudes, decay_rates = xopt[1:].reshape(-1, 2).T
 
-    return offset, amplitudes, kappas
+    return offset, amplitudes, decay_rates
 
 
 # =====================================================================================================================
@@ -145,8 +145,8 @@ def _damped_cosine_adapter(
     t: np.ndarray[float], x: np.ndarray[float]
 ) -> np.ndarray[float]:
     offset, modes = float(x[0]), x[1:].reshape(-1, 4)
-    amplitudes, phases, ws, kappas = modes[:, 0], modes[:, 1], modes[:, 2], modes[:, 3]
-    return _damped_cosine_model(t, offset, amplitudes, phases, ws, kappas)
+    amplitudes, phases, pulsations, decay_rates = modes[:, 0], modes[:, 1], modes[:, 2], modes[:, 3]
+    return _damped_cosine_model(t, offset, amplitudes, phases, pulsations, decay_rates)
 
 
 def _post_fit_damped_cosine(
@@ -155,13 +155,13 @@ def _post_fit_damped_cosine(
     offset: complex,
     amplitudes: np.ndarray[float],
     phases: np.ndarray[float],
-    ws: np.ndarray[float],
-    kappas: np.ndarray[float],
+    pulsations: np.ndarray[float],
+    decay_rates: np.ndarray[float],
 ) -> DampedCosineResult:
     cost = ft.partial(_cost, times=times, signal=signal, model=_damped_cosine_adapter)
 
     x0 = [offset]
-    x1 = np.stack((amplitudes, phases, ws, kappas)).T.flatten()
+    x1 = np.stack((amplitudes, phases, pulsations, decay_rates)).T.flatten()
     x0 = np.concatenate((x0, x1))
 
     bounds = [NO_BOUND]
@@ -169,15 +169,15 @@ def _post_fit_damped_cosine(
     xopt = minimize(cost, x0, bounds=bounds).x
     offset = xopt[0]
 
-    amplitudes, phases, ws, kappas = xopt[1:].reshape(-1, 4).T
+    amplitudes, phases, pulsations, decay_rates = xopt[1:].reshape(-1, 4).T
 
     new_result = DampedCosineResult(
         times=times,
         signal=signal,
         offset=offset,
         amplitudes=amplitudes,
-        ws=ws,
-        kappas=kappas,
+        pulsations=pulsations,
+        decay_rates=decay_rates,
         phases=phases,
     )
 

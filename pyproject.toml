@@ -2,10 +2,9 @@
 name = "bicfit"
 version = "0.1.0"
 description = "General purpose exponential function fitting"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "matplotlib",
-    "notebook>=7.4.5",
     "numpy",
     "scipy>=1.10.0",
 ]

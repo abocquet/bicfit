@@ -17,8 +17,8 @@ class DampedCosineMode(Mode):
             0.0,
             np.array([self.amplitude]),
             np.array([self.phase]),
-            np.array([self.w]),
-            np.array([self.kappa]),
+            np.array([self.pulsation]),
+            np.array([self.decay_rate]),
         )
 
 
@@ -27,21 +27,25 @@ class DampedCosineResult(Result):
     offset: float
     amplitudes: np.ndarray[float]
     phases: np.ndarray[float]
-    ws: np.ndarray[float]
-    kappas: np.ndarray[float]
+    pulsations: np.ndarray[float]
+    decay_rates: np.ndarray[float]
 
     @property
     def modes(self) -> list[DampedCosineMode]:
         return [
-            DampedCosineMode(amplitude=amplitude, phase=phase, w=w, kappa=kappa)
-            for amplitude, phase, w, kappa in zip(
-                self.amplitudes, self.phases, self.ws, self.kappas
+            DampedCosineMode(amplitude=amplitude, phase=phase, pulsation=pulsation, decay_rate=decay_rate)
+            for amplitude, phase, pulsation, decay_rate in zip(
+                self.amplitudes, self.phases, self.pulsations, self.decay_rates
             )
         ]
 
+    @property
+    def frequencies(self) -> np.ndarray[float]:
+        return self.pulsations / (2 * np.pi)
+
     def __call__(self, t: FloatLike) -> FloatLike:
         return _damped_cosine_model(
-            t, self.offset, self.amplitudes, self.phases, self.ws, self.kappas
+            t, self.offset, self.amplitudes, self.phases, self.pulsations, self.decay_rates
         )
 
     def __repr__(self):
@@ -49,6 +53,6 @@ class DampedCosineResult(Result):
 
     def pretty_repr(self):
         if len(self.amplitudes) == 1:
-            return f"offset = {self.offset:0.2f}, amplitude = {self.amplitudes[0]:0.2e}, phase = {self.phases[0]:0.2f}, w = {self.ws[0]:0.2e}, kappa = {self.kappas[0]:0.2e}"
+            return f"offset = {self.offset:0.2f}, amplitude = {self.amplitudes[0]:0.2e}, phase = {self.phases[0]:0.2f}, pulsation = {self.pulsations[0]:0.2e}, decay_rate = {self.decay_rates[0]:0.2e}"
         else:
             return f"offset = {self.offset:0.2f}, {len(self.amplitudes)} modes"

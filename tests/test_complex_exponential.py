@@ -10,16 +10,16 @@ testdata = [
 ]
 
 
-@pytest.mark.parametrize("amplitude, w, kappa, offset, horizon, n_points", testdata)
+@pytest.mark.parametrize("amplitude, pulsation, decay_rate, offset, horizon, n_points", testdata)
 @pytest.mark.parametrize("with_post_fit", [False, True])
 @pytest.mark.parametrize("noise,tol", [(0, 0.01), (0.1, 0.15)])
 def test_single_exponential(
-    amplitude, kappa, w, offset, horizon, n_points, with_post_fit, noise, tol
+    amplitude, decay_rate, pulsation, offset, horizon, n_points, with_post_fit, noise, tol
 ):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
     noise = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
-    signal = offset + amplitude * np.exp((1j * w - kappa) * times) + noise
+    signal = offset + amplitude * np.exp((1j * pulsation - decay_rate) * times) + noise
 
     # fit the signal
     result = fit_complex_exponential(
@@ -29,19 +29,19 @@ def test_single_exponential(
         assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
             "amplitude"
         )
-        assert abs(result.modes[0].w - w) / w < tol, "w"
-        assert abs(result.modes[0].kappa - kappa) / kappa < tol, "kappa"
+        assert abs(result.modes[0].pulsation - pulsation) / pulsation < tol, "pulsation"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed_test = e.args[0].split("\n")[0]
         print(
             f"Failed estimating '{failed_test}' for \n"
-            f"- amplitude = {amplitude} (got {result.modes[0].amplitude})\n"
-            f"- w         = {w} (got {result.modes[0].w})\n"
-            f"- kappa     = {kappa} (got {result.modes[0].kappa})\n"
-            f"- offset    = {offset} (got {result.offset})\n"
-            f"- horizon   = {horizon}\n"
-            f"- n_points  = {n_points}"
+            f"- amplitude  = {amplitude} (got {result.modes[0].amplitude})\n"
+            f"- pulsation  = {pulsation} (got {result.modes[0].pulsation})\n"
+            f"- decay_rate = {decay_rate} (got {result.modes[0].decay_rate})\n"
+            f"- offset     = {offset} (got {result.offset})\n"
+            f"- horizon    = {horizon}\n"
+            f"- n_points   = {n_points}"
         )
         raise e
 
@@ -58,12 +58,12 @@ def test_two_exponential(with_post_fit, noise, tol):
 
     offset = 10.2 + 20.3j
     a1, a2 = 0.5, 1.0
-    w1, w2 = 0.4, 0.2
-    kappa1, kappa2 = 0.02, 0.05
+    pulsation1, pulsation2 = 0.4, 0.2
+    decay_rate1, decay_rate2 = 0.02, 0.05
 
     signal = offset
-    signal += a1 * np.exp((1j * w1 - kappa1) * times)
-    signal += a2 * np.exp((1j * w2 - kappa2) * times)
+    signal += a1 * np.exp((1j * pulsation1 - decay_rate1) * times)
+    signal += a2 * np.exp((1j * pulsation2 - decay_rate2) * times)
     signal += noise
 
     # fit the signal
@@ -73,25 +73,25 @@ def test_two_exponential(with_post_fit, noise, tol):
 
     try:
         assert abs(result.modes[0].amplitude - a1) / a1 < tol, "a1"
-        assert abs(result.modes[0].w - w1) / w1 < tol, "w1"
-        assert abs(result.modes[0].kappa - kappa1) / kappa1 < tol, "kappa1"
+        assert abs(result.modes[0].pulsation - pulsation1) / pulsation1 < tol, "pulsation1"
+        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, "decay_rate1"
 
         assert abs(result.modes[1].amplitude - a2) / a2 < tol, "a2"
-        assert abs(result.modes[1].w - w2) / w2 < tol, "w2"
-        assert abs(result.modes[1].kappa - kappa2) / kappa2 < tol, "kappa2"
+        assert abs(result.modes[1].pulsation - pulsation2) / pulsation2 < tol, "pulsation2"
+        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, "decay_rate2"
 
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed_test = e.args[0].split("\n")[0]
         print(
             f"Failed estimating '{failed_test}' for \n"
-            f"- amplitude 1 = {result.modes[0].amplitude}\n"
-            f"- w 1         = {result.modes[0].w}\n"
-            f"- kappa 1     = {result.modes[0].kappa})\n"
-            f"- amplitude 2 = {result.modes[1].amplitude}\n"
-            f"- w 2         = {result.modes[1].w}\n"
-            f"- kappa 2     = {result.modes[1].kappa})\n"
-            f"- offset      = {result.offset})\n"
+            f"- amplitude 1   = {result.modes[0].amplitude}\n"
+            f"- pulsation 1   = {result.modes[0].pulsation}\n"
+            f"- decay_rate 1  = {result.modes[0].decay_rate})\n"
+            f"- amplitude 2   = {result.modes[1].amplitude}\n"
+            f"- pulsation 2   = {result.modes[1].pulsation}\n"
+            f"- decay_rate 2  = {result.modes[1].decay_rate})\n"
+            f"- offset        = {result.offset})\n"
         )
         raise e
 

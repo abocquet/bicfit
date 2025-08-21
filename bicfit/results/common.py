@@ -8,12 +8,12 @@ from ..types import FloatLike, F
 
 @dataclass(eq=True, frozen=True)
 class Mode:
-    w: float  # omega (pulsation)
-    kappa: float
+    pulsation: float  # omega (pulsation)
+    decay_rate: float
 
     @property
     def frequency(self):
-        return 2 * np.pi * self.w
+        return 2 * np.pi * self.pulsation
 
     def __call__(self, t: FloatLike) -> FloatLike:
         raise NotImplementedError()
