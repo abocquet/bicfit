@@ -119,13 +119,13 @@ def _post_fit_exponential(
         x0 = [result.offset.real, result.offset.imag]
         bounds = [NO_BOUND, NO_BOUND]  # No bounds for offset
         for mode in result.modes:
-            x0.extend([mode.amplitude.real, mode.amplitude.imag, mode.kappa])
+            x0.extend([mode.complex_amplitude.real, mode.complex_amplitude.imag, mode.kappa])
             bounds.extend([NO_BOUND, NO_BOUND, POSITIVE_BOUND])
     else:
-        x0 = [result.offset]
+        x0 = [result.offset.real]
         bounds = [NO_BOUND]  # No bounds for offset
         for mode in result.modes:
-            x0.extend([mode.amplitude, mode.kappa])
+            x0.extend([mode.complex_amplitude.real, mode.kappa])
             bounds.extend([NO_BOUND, POSITIVE_BOUND])
 
     x0 = np.array(x0)
@@ -142,6 +142,7 @@ def _post_fit_exponential(
         for amplitude, kappa in xopt[1:].reshape(-1, 2):
             mode = Exponential(amplitude=amplitude.real, kappa=kappa)
             modes.append(mode)
+
 
     new_result = Result(
         offset=offset,

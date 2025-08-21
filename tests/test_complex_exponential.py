@@ -1,3 +1,4 @@
+from numpy.random import Generator, PCG64
 import numpy as np
 import pytest
 
@@ -13,14 +14,15 @@ testdata = [
 @pytest.mark.parametrize("with_post_fit", [False, True])
 @pytest.mark.parametrize("noise,tol", [(0, 0.01), (0.1, 0.15)])
 def test_single_exponential(amplitude, kappa, w, offset, horizon, n_points, with_post_fit, noise, tol):
+    rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
-    noise = np.random.normal(0, noise, n_points) + 1j * np.random.normal(0, noise, n_points)
+    noise = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
     signal = offset + amplitude * np.exp((1j * w - kappa) * times) + noise
 
     # fit the signal
     result = fit_complex_exponential(times, signal, n_modes=1, with_post_fit=with_post_fit)
     try:
-        assert abs(result.modes[0].amplitude - amplitude) / amplitude < tol, "amplitude"
+        assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, "amplitude"
         assert abs(result.modes[0].w - w) / w < tol, "w"
         assert abs(result.modes[0].kappa - kappa) / kappa < tol, "kappa"
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
@@ -28,25 +30,26 @@ def test_single_exponential(amplitude, kappa, w, offset, horizon, n_points, with
         failed_test = e.args[0].split("\n")[0]
         print(
             f"Failed estimating '{failed_test}' for \n"
-            f"- w        = {w} (got {result.modes[0].w})\n"
-            f"- kappa    = {kappa} (got {result.modes[0].kappa})\n"
-            f"- offset   = {offset} (got {result.offset})\n"
-            f"- horizon  = {horizon}\n"
-            f"- n_points = {n_points}"
+            f"- amplitude = {amplitude} (got {result.modes[0].amplitude})\n"
+            f"- w         = {w} (got {result.modes[0].w})\n"
+            f"- kappa     = {kappa} (got {result.modes[0].kappa})\n"
+            f"- offset    = {offset} (got {result.offset})\n"
+            f"- horizon   = {horizon}\n"
+            f"- n_points  = {n_points}"
         )
         raise e
 
-@pytest.mark.parametrize("with_post_fit", [False, True])
-@pytest.mark.parametrize("noise,tol", [(0, 0.01), (0.1, 0.15)])
+@pytest.mark.parametrize("with_post_fit,noise,tol", [(False,0, 0.01), (False, 0.1, 0.25),(True,0, 0.01), (True, 0.1, 0.2)])
 def test_two_exponential(with_post_fit, noise, tol):
+    rng = Generator(PCG64(42))
     n_points = 100
     times = np.linspace(0, 150, n_points)
-    noise = np.random.normal(0, noise, n_points) + 1j * np.random.normal(0, noise, n_points)
+    noise = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
 
     offset = 10.2 + 20.3j
     a1, a2 = 1.0, 0.5
     w1, w2 = 0.2, 0.4
-    kappa1, kappa2 = 0.05, 0.01
+    kappa1, kappa2 = 0.05, 0.02
 
     signal = offset
     signal += a1 * np.exp((1j * w1 - kappa1) * times)

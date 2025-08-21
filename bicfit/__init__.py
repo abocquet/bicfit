@@ -48,7 +48,14 @@ def fit_exponential(
     if with_post_fit:
         result = _post_fit_exponential(times, signal, result, is_complex)
     else:
-        result.modes = [Exponential(mode.amplitude, mode.kappa) for mode in result.modes]
+        modes = []
+        for mode in result.modes:
+            amplitude = mode.complex_amplitude if is_complex else mode.complex_amplitude.real
+            modes.append(Exponential(amplitude, mode.kappa))
+        result.modes = modes
+
+        if not is_complex:
+            result.offset = result.offset.real
 
     return result
 
@@ -159,7 +166,6 @@ def bicfit(
                 f"Expected the offset to be real, but got {offset.imag} imaginary part, above fixed tolerance {tol}"
             )
         offset = offset.real
-
     return Result(offset=offset, modes=modes, times=times, signal=original_signal)
 
 
@@ -212,9 +218,7 @@ def _match_real_modes(modes: List[ComplexMode], tol: float) -> List[RealMode]:  
             else:
                 cost[i, j] = abs(normalized_frequency[i] - normalized_frequency[j])
 
-    print(cost)
     row_indices, col_indices = linear_sum_assignment(cost)
-    print(row_indices, col_indices)
 
     assignment = dict()
     for idx_1, idx_2 in zip(row_indices, col_indices):

@@ -66,7 +66,10 @@ class Result(Generic[M]):
     signal: np.ndarray
 
     def __post_init__(self):
-        self.modes = sorted(self.modes, key=lambda mode: mode.w)
+        if isinstance(self.modes[0], (RealMode, ComplexMode)):
+            self.modes = sorted(self.modes, key=lambda mode: mode.w)
+        if isinstance(self.modes[0], Exponential):
+            self.modes = sorted(self.modes, key=lambda mode: mode.kappa)
 
     def __call__(self, t):
         return sum([mode(t) for mode in self.modes]) + self.offset
