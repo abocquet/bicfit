@@ -53,6 +53,6 @@ class DampedCosineResult(Result):
 
     def pretty_repr(self):
         if len(self.amplitudes) == 1:
-            return f"offset = {self.offset:0.2f}, amplitude = {self.amplitudes[0]:0.2e}, phase = {self.phases[0]:0.2f}, pulsation = {self.pulsations[0]:0.2e}, decay_rate = {self.decay_rates[0]:0.2e}"
+            return f"offset = {self.offset:0.2f}, amplitude = {self.amplitudes[0]:0.2e}, phase = {self.phases[0]:0.2f}, pulsation = {self.pulsations[0]:0.2e}, decay_rate / 2pi = {self.decay_rates[0] / (2*np.pi):0.2e}"
         else:
             return f"offset = {self.offset:0.2f}, {len(self.amplitudes)} modes"

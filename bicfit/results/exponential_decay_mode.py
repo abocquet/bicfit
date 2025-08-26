@@ -55,6 +55,6 @@ class ExponentialDecayResult(Result, Generic[F]):
             else:
                 amplitude_str = f"{self.amplitudes[0]:0.2e}"
 
-            return f"offset = {offset_str}, amplitude = {amplitude_str}, decay_rate = {self.decay_rates[0]:0.2e}"
+            return f"offset = {offset_str}, amplitude = {amplitude_str}, decay_rate / 2pi = {self.decay_rates[0] / (2*np.pi):0.2e}"
         else:
             return f"offset = {offset_str}, {len(self.amplitudes)} modes"

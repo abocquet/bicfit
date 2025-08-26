@@ -62,7 +62,7 @@ class ComplexResult(Result):
 
     def pretty_repr(self):
         if len(self.amplitudes) == 1:
-            return f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j, amplitude = {self.amplitudes[0].real:0.2e}+{self.amplitudes[0].imag:0.2e}j,  pulsation = {self.pulsations[0]:0.2e}, decay_rate = {self.decay_rates[0]:0.2e}"
+            return f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j, amplitude = {self.amplitudes[0].real:0.2e}+{self.amplitudes[0].imag:0.2e}j,  pulsation = {self.pulsations[0]:0.2e}, decay_rate / 2pi = {self.decay_rates[0] / (2*np.pi):0.2e}"
         else:
             return f"offset = {self.offset.real:0.2f} + {self.offset.imag:0.2f}j, {len(self.amplitudes)} modes"
 
