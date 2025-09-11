@@ -37,6 +37,10 @@ signal = offset + np.exp((1j * w - kappa) * times) + noise
 
 result = fit_complex_exponential(times, signal)
 result.plot()
+
+# you can call `result` directly to evaluate it
+fitted_signal = result(times)
+
 result
 ```
 
