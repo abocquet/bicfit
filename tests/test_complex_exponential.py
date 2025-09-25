@@ -2,7 +2,7 @@ from numpy.random import Generator, PCG64
 import numpy as np
 import pytest
 
-from bicfit import fit_complex_exponential, ComplexResult
+from src.bicfit import fit_complex_exponential, ComplexResult
 
 testdata = [
     (1.0, 13.7, 0.92, 61 + 62j, 3.6, 110),

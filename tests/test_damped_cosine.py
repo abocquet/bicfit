@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.random import PCG64, Generator
 
-from bicfit import fit_damped_cosine, DampedCosineResult
+from src.bicfit import fit_damped_cosine, DampedCosineResult
 
 testdata = [
     (1.0, 0.2, 0.05, np.pi / 2, 10.0, 150, 110),

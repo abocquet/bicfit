@@ -28,8 +28,9 @@ n_points = 100
 ```
 
 ### Complex exponential decay
+
 ```python
-from bicfit import fit_complex_exponential
+from src.bicfit import fit_complex_exponential
 
 times = np.linspace(0, 150, n_points)
 noise = np.random.normal(0, sigma_noise, n_points) + 1j * np.random.normal(0, sigma_noise, n_points)
@@ -62,8 +63,9 @@ The `ComplexResult` and `ComplexMode` classes (as all `Result` and `Mode` classe
 evaluate the fitted function at any time.
 
 ### Damped cosine
+
 ```python
-from bicfit import fit_damped_cosine
+from src.bicfit import fit_damped_cosine
 
 signal = signal.real
 
@@ -90,7 +92,7 @@ It exposes a `modes` property that returns a list of `DampedCosineMode` objects,
 ### Exponential decay
 
 ```python
-from bicfit import fit_exponential_decay
+from src.bicfit import fit_exponential_decay
 
 noise = np.random.normal(0, sigma_noise, n_points) + 1j * np.random.normal(0, sigma_noise, n_points)
 signal = offset + np.exp(- kappa * times) + noise

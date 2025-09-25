@@ -1,6 +1,6 @@
 import numpy as np
 
-from bicfit.types import FloatLike
+from src.bicfit.types import FloatLike
 
 """
     Models are functions that describe the behavior of a system over time.

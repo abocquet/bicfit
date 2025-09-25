@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from bicfit import _match_real_modes
+from src.bicfit import _match_real_modes
 
 
 def test_match_real_modes_happy_path():
