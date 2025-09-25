@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.random import Generator, PCG64
 
-from src.bicfit import fit_exponential_decay, ExponentialDecayResult
+from bicfit import fit_exponential_decay, ExponentialDecayResult
 
 real_testdata = [
     (1.0, 0.05, 10.0, 150, 110),

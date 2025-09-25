@@ -14,6 +14,13 @@ Currently, bicfit supports fitting:
 of an EM System from Its Transient Response_ Hua and Sarkar (IEEE TRANSACTIONS ON ANTENNAS
 AND PROPAGATION, VOL. 37, NO. 2, FEBRUARY 1989) 
 
+## Installation
+
+You can install bicfit via `pip`:
+```bash
+pip install bicfit
+```
+
 ## Usage
 
 Start with 
@@ -30,7 +37,7 @@ n_points = 100
 ### Complex exponential decay
 
 ```python
-from src.bicfit import fit_complex_exponential
+from bicfit import fit_complex_exponential
 
 times = np.linspace(0, 150, n_points)
 noise = np.random.normal(0, sigma_noise, n_points) + 1j * np.random.normal(0, sigma_noise, n_points)
@@ -65,7 +72,7 @@ evaluate the fitted function at any time.
 ### Damped cosine
 
 ```python
-from src.bicfit import fit_damped_cosine
+from bicfit import fit_damped_cosine
 
 signal = signal.real
 
@@ -92,7 +99,7 @@ It exposes a `modes` property that returns a list of `DampedCosineMode` objects,
 ### Exponential decay
 
 ```python
-from src.bicfit import fit_exponential_decay
+from bicfit import fit_exponential_decay
 
 noise = np.random.normal(0, sigma_noise, n_points) + 1j * np.random.normal(0, sigma_noise, n_points)
 signal = offset + np.exp(- kappa * times) + noise
