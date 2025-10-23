@@ -1,6 +1,6 @@
 [project]
 name = "bicfit"
-version = "0.1.2"
+version = "0.2.0"
 description = "General purpose exponential function fitting"
 keywords = ["fit", "numerics"]
 authors = [
