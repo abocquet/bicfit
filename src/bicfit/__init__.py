@@ -3,19 +3,21 @@ from typing import Tuple
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
-from .post_fit import (
+from .post_fitting import (
     _post_fit_complex_exponential,
     _post_fit_damped_cosine,
     _post_fit_exponential,
+    NoOffset,
 )
 from .results import ComplexResult, ExponentialDecayResult, DampedCosineResult
 
+PostFitOptions = bool | NoOffset
 
 def fit_complex_exponential(
     times: np.ndarray[float],
     signal: np.ndarray[complex],
     n_modes: int = 1,
-    with_post_fit: bool = True,
+    post_fit: PostFitOptions = True,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
 ) -> ComplexResult:
@@ -29,9 +31,11 @@ def fit_complex_exponential(
         The complex signal to fit.
     :param n_modes: int
         The number of modes to fit. Each mode corresponds to a complex exponential term.
-    :param with_post_fit: bool
+    :param post_fit: PostFitOptions (bool | NoOffset)
         Whether to perform a post-fit refinement of the parameters, using least-square error minimization.
-        This is recommended to improve the accuracy of the fit.
+        This is recommended to improve the accuracy of the fit. If `False`, no post-fit is performed.
+        If `True`, a full post-fit is performed. If `NoOffset()`, the post-fit is performed with the constraint that
+        the offset is zero.
     :param tol: float
         The tolerance for the fitting process. It is used to determine the convergence of the fit.
     :param L_fraction: float
@@ -44,9 +48,10 @@ def fit_complex_exponential(
     offset, amplitudes, pulsations, decay_rates = bicfit(
         times, signal, n_modes=n_modes, tol=tol, L_fraction=L_fraction
     )
-    if with_post_fit:
+    if post_fit:
+        options = None if post_fit is True else post_fit
         offset, amplitudes, pulsations, decay_rates = _post_fit_complex_exponential(
-            times, signal, offset, amplitudes, pulsations, decay_rates
+            times, signal, offset, amplitudes, pulsations, decay_rates, options
         )
 
     return ComplexResult(
@@ -63,7 +68,7 @@ def fit_exponential_decay(
     times: np.ndarray[float],
     signal: np.ndarray[float | complex],
     n_modes: int = 1,
-    with_post_fit: bool = True,
+    post_fit: PostFitOptions = True,
     is_complex: bool = False,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
@@ -77,9 +82,11 @@ def fit_exponential_decay(
         The signal to fit. It can be real or complex.
     :param n_modes: int
         The number of modes to fit. Each mode corresponds to an exponential decay term.
-    :param with_post_fit: bool
+    :param post_fit: PostFitOptions (bool | NoOffset)
         Whether to perform a post-fit refinement of the parameters, using least-square error minimization.
-        This is recommended to improve the accuracy of the fit.
+        This is recommended to improve the accuracy of the fit. If `False`, no post-fit is performed.
+        If `True`, a full post-fit is performed. If `NoOffset()`, the post-fit is performed with the constraint that
+        the offset is zero.
     :param is_complex: bool
         Whether the signal is complex. If True, the with will take the $(A_k)$ complex, and real otherwise.
     :param tol: float
@@ -95,9 +102,10 @@ def fit_exponential_decay(
         tol=tol,
         L_fraction=L_fraction,
     )
-    if with_post_fit:
+    if post_fit:
+        options = None if post_fit is True else post_fit
         offset, amplitudes, decay_rates = _post_fit_exponential(
-            times, signal, offset, amplitudes, decay_rates, is_complex
+            times, signal, offset, amplitudes, decay_rates, is_complex, options
         )
     else:
         if not is_complex:
@@ -119,7 +127,7 @@ def fit_damped_cosine(
     times: np.ndarray[float],
     signal: np.ndarray[float],
     n_modes: int = 1,
-    with_post_fit: bool = True,
+    post_fit: PostFitOptions = True,
     tol: float = 1e-3,
     L_fraction: float = 0.3,
 ) -> DampedCosineResult:
@@ -133,9 +141,11 @@ def fit_damped_cosine(
         The real signal to fit.
     :param n_modes: int
         The number of modes to fit. Each mode corresponds to a damped cosine term.
-    :param with_post_fit: bool
+    :param post_fit: PostFitOptions (bool | NoOffset)
         Whether to perform a post-fit refinement of the parameters, using least-square error minimization.
-        This is recommended to improve the accuracy of the fit.
+        This is recommended to improve the accuracy of the fit. If `False`, no post-fit is performed.
+        If `True`, a full post-fit is performed. If `NoOffset()`, the post-fit is performed with the constraint that
+        the offset is zero.
     :param tol: float
         The tolerance for the fitting process. It is used to determine the convergence of the fit.
     :param L_fraction: float
@@ -161,9 +171,10 @@ def fit_damped_cosine(
         )
     offset = offset.real
 
-    if with_post_fit:
+    if post_fit:
+        options = None if post_fit is True else post_fit
         result = _post_fit_damped_cosine(
-            times, signal, offset, amplitudes, phases, pulsations, decay_rates
+            times, signal, offset, amplitudes, phases, pulsations, decay_rates, options
         )
     else:
         result = DampedCosineResult(
@@ -286,6 +297,8 @@ def _match_real_modes(
     decay_rates: np.ndarray[float],
     tol: float,
 ) -> Tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]]:
+    """ Associates the complex eigenfrequencies of the fit together to form cosines and sines """
+
     n = len(amplitudes)
     assert len(amplitudes) == len(pulsations) == len(decay_rates)
     assert n % 2 == 0, "Expected an even number of modes to match real modes"

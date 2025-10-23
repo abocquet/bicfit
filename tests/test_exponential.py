@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.random import Generator, PCG64
 
-from bicfit import fit_exponential_decay, ExponentialDecayResult
+from bicfit import fit_exponential_decay, ExponentialDecayResult, NoOffset
 
 real_testdata = [
     (1.0, 0.05, 10.0, 150, 110),
@@ -18,18 +18,18 @@ complex_testdata = [
 
 @pytest.mark.parametrize("amplitude, decay_rate, offset, horizon, n_points", real_testdata)
 @pytest.mark.parametrize(
-    "with_post_fit,noise,tol",
+    "post_fit,noise,tol",
     [(False, 0, 0.02), (False, 0.05, 0.2), (True, 0, 0.02), (True, 0.05, 0.1)],
 )
 def test_single_real_exponential(
-    amplitude, decay_rate, offset, horizon, n_points, with_post_fit, noise, tol
+    amplitude, decay_rate, offset, horizon, n_points, post_fit, noise, tol
 ):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
     noise_vec = rng.normal(0, noise, n_points)
     signal = offset + amplitude * np.exp(-decay_rate * times) + noise_vec
 
-    result = fit_exponential_decay(times, signal, n_modes=1, with_post_fit=with_post_fit, is_complex=False)
+    result = fit_exponential_decay(times, signal, n_modes=1, post_fit=post_fit, is_complex=False)
     try:
         assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
             "amplitude"
@@ -53,18 +53,18 @@ def test_single_real_exponential(
     "amplitude, decay_rate, offset, horizon, n_points", complex_testdata
 )
 @pytest.mark.parametrize(
-    "with_post_fit, noise,tol",
+    "post_fit, noise,tol",
     [(False, 0, 0.03), (False, 0.05, 0.2), (True, 0, 0.03), (True, 0.05, 0.1)],
 )
 def test_single_complex_exponential(
-    amplitude, decay_rate, offset, horizon, n_points, with_post_fit, noise, tol
+    amplitude, decay_rate, offset, horizon, n_points, post_fit, noise, tol
 ):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
     noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
     signal = offset + amplitude * np.exp(-decay_rate * times) + noise_vec
 
-    result = fit_exponential_decay(times, signal, n_modes=1, with_post_fit=with_post_fit, is_complex=True)
+    result = fit_exponential_decay(times, signal, n_modes=1, post_fit=post_fit, is_complex=True)
     amp_est = result.modes[0].amplitude
 
     try:
@@ -85,10 +85,10 @@ def test_single_complex_exponential(
 
 
 @pytest.mark.parametrize(
-    "with_post_fit,noise,tol",
+    "post_fit,noise,tol",
     [(False, 0, 0.05), (False, 0.01, 0.6), (True, 0, 0.01), (True, 0.01, 0.1)],
 )
-def test_two_real_exponentials(with_post_fit, noise, tol):
+def test_two_real_exponentials(post_fit, noise, tol):
     rng = Generator(PCG64(42))
     n_points = 120
     times = np.linspace(0, 150, n_points)
@@ -102,7 +102,7 @@ def test_two_real_exponentials(with_post_fit, noise, tol):
         offset + a1 * np.exp(-decay_rate1 * times) + a2 * np.exp(-decay_rate2 * times) + noise_vec
     )
 
-    result = fit_exponential_decay(times, signal, n_modes=2, with_post_fit=with_post_fit, is_complex=False)
+    result = fit_exponential_decay(times, signal, n_modes=2, post_fit=post_fit, is_complex=False)
 
     try:
         assert abs(result.modes[0].amplitude - a1) / abs(a1) < tol, "a1"
@@ -126,10 +126,10 @@ def test_two_real_exponentials(with_post_fit, noise, tol):
 
 
 @pytest.mark.parametrize(
-    "with_post_fit,noise,tol",
+    "post_fit,noise,tol",
     [(False, 0, 0.05), (False, 0.01, 0.3), (True, 0, 0.01), (True, 0.01, 0.05)],
 )
-def test_two_complex_exponentials(with_post_fit, noise, tol):
+def test_two_complex_exponentials(post_fit, noise, tol):
     rng = Generator(PCG64(42))
     n_points = 120
     times = np.linspace(0, 150, n_points)
@@ -143,7 +143,7 @@ def test_two_complex_exponentials(with_post_fit, noise, tol):
         offset + a1 * np.exp(-decay_rate1 * times) + a2 * np.exp(-decay_rate2 * times) + noise_vec
     )
 
-    result = fit_exponential_decay(times, signal, n_modes=2, with_post_fit=with_post_fit, is_complex=True)
+    result = fit_exponential_decay(times, signal, n_modes=2, post_fit=post_fit, is_complex=True)
     try:
         assert abs(result.modes[0].amplitude - a1) / abs(a1) < tol, "a1"
         assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, "decay_rate1"
@@ -183,3 +183,39 @@ def test_individual_mode():
     assert np.isclose(
         result(0.0), result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0)
     )
+
+
+@pytest.mark.parametrize(
+    "amplitude, decay_rate, offset, horizon, n_points", complex_testdata
+)
+@pytest.mark.parametrize(
+    "noise,tol",
+    [(0, 0.03), (0.05, 0.1)]
+)
+def test_no_offset(
+        amplitude, decay_rate, offset, horizon, n_points, noise, tol
+):
+    rng = Generator(PCG64(42))
+    times = np.linspace(0, horizon, n_points)
+    noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
+    signal = amplitude * np.exp(-decay_rate * times) + noise_vec
+
+    result = fit_exponential_decay(times, signal, n_modes=1, post_fit=NoOffset(), is_complex=True)
+    amp_est = result.modes[0].amplitude
+
+    try:
+        assert abs(abs(amp_est) - abs(amplitude)) / abs(amplitude) < tol, "amplitude"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        assert abs(result.offset) < 1e-5, "offset"
+    except AssertionError as e:
+        failed = e.args[0]
+        print(
+            f"Failed estimating '{failed}' for complex exponential:\n"
+            f"- amplitude true={amplitude} got={amp_est}\n"
+            f"- decay_rate     true={decay_rate} got={result.modes[0].decay_rate}\n"
+            f"- offset    true={offset} got={result.offset}\n"
+            f"- horizon   = {horizon}\n"
+            f"- n_points  = {n_points}"
+        )
+        raise e
+

@@ -124,7 +124,7 @@ kappa1, kappa2 = 0.05, 0.01
 noise = np.random.normal(0, sigma_noise, n_points) + 1j * np.random.normal(0, sigma_noise, n_points)
 signal = offset + a1 * np.exp((1j * w1 - kappa1) * times) + a2 * np.exp((1j * w2 - kappa2) * times) + noise
 
-result = fit_complex_exponential(times, signal, n_modes=2, with_post_fit=True)
+result = fit_complex_exponential(times, signal, n_modes=2, post_fit=True)
 result.plot()
 result
 ```
@@ -139,13 +139,29 @@ Here the `result` is an object of type `ExponentialDecayResult`that has similar 
 
 It also has the `plot()` function, `modes` attribute and is callable like the other result classes.
 
+### Fit with no offset
+
+If you know that your data has no offset, you can set the `post_fit` parameter to `bicfit.NoOffset()` to force the fit to have no offset.
+
+```python
+result = fit_complex_exponential(times, signal, post_fit=bicfit.NoOffset())
+```
+
 ## Coming features
 
 There are a few features that are not implemented yet but could be in the future, if there is a demand for them:
 - [ ] exploiting knowledge of the plateau of an exponential decay
 - [ ] fitting non uniformly sampled data
 - [ ] port fit functions to JAX
-- [ ] [performance] amplitude fitting is probably overkill and could be done from the pencil eigenvalues 
+- [ ] [performance] amplitude fitting is probably overkill and could be done from the pencil eigenvectors 
+
+## Development
+
+You can run tests using `pytest`:
+```bash
+uv sync
+uv run pytest .
+```
 
 ## Feedback
 

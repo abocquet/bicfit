@@ -1,4 +1,5 @@
 import functools as ft
+from dataclasses import dataclass
 from typing import Callable, Tuple
 
 import numpy as np
@@ -10,7 +11,21 @@ from .types import FloatLike
 
 NO_BOUND = (None, None)
 POSITIVE_BOUND = (0, None)
+ZERO_BOUND = (0, 0)
 
+# =====================================================================================================================
+# Post fit options
+# =====================================================================================================================
+
+@dataclass
+class NoOffset:
+    pass
+
+_PostFitOptions = None | NoOffset
+
+# =====================================================================================================================
+# Common functions
+# =====================================================================================================================
 
 def _cost(
     x: np.ndarray,
@@ -48,6 +63,7 @@ def _post_fit_complex_exponential(
     amplitudes: np.ndarray[complex],
     pulsations: np.ndarray[float],
     decay_rates: np.ndarray[float],
+    options: _PostFitOptions
 ) -> Tuple[complex, np.ndarray[complex], np.ndarray[float], np.ndarray[float]]:
     assert len(amplitudes) == len(pulsations) == len(decay_rates)
 
@@ -59,7 +75,11 @@ def _post_fit_complex_exponential(
     x1 = np.stack((amplitudes.real, amplitudes.imag, pulsations, decay_rates)).T.flatten()
     x0 = np.concatenate((x0, x1))
 
-    bounds = [NO_BOUND, NO_BOUND]  # No bounds for offset
+    if isinstance(options, NoOffset):
+        offset_bounds = [ZERO_BOUND, ZERO_BOUND]  # Force offset to zero
+    else:
+        offset_bounds = [NO_BOUND, NO_BOUND]  # No bounds for offset
+    bounds = offset_bounds
     bounds += [NO_BOUND, NO_BOUND, NO_BOUND, POSITIVE_BOUND] * len(amplitudes)
 
     xopt = minimize(cost, x0, bounds=bounds).x
@@ -98,6 +118,7 @@ def _post_fit_exponential(
     amplitudes: np.ndarray[complex],
     decay_rates: np.ndarray[complex],
     is_complex: bool,
+    options: _PostFitOptions
 ) -> Tuple[FloatLike, np.ndarray[FloatLike], np.ndarray[FloatLike]]:
     assert len(amplitudes) == len(decay_rates)
 
@@ -108,19 +129,32 @@ def _post_fit_exponential(
         model=ft.partial(_exponential_adapter, is_complex=is_complex),
     )
 
-    if is_complex:
-        x0 = [offset.real, offset.imag]
-        x1 = np.stack((amplitudes.real, amplitudes.imag, decay_rates)).T.flatten()
-        x0 = np.concatenate((x0, x1))
+    if isinstance(options, NoOffset):
+        if is_complex:
+            offset_bounds = [ZERO_BOUND, ZERO_BOUND]  # Force offset to zero
+            offset_guess = [0, 0]
+        else:
+            offset_bounds = [ZERO_BOUND]  # Force offset to zero
+            offset_guess = [0]
+    else:
+        if is_complex:
+            offset_bounds = [NO_BOUND, NO_BOUND]  # No bounds for offset
+            offset_guess = [offset.real, offset.imag]
+        else:
+            offset_bounds = [NO_BOUND]  # No bounds for offset
+            offset_guess = [offset.real]
 
-        bounds = [NO_BOUND, NO_BOUND] + [NO_BOUND, NO_BOUND, POSITIVE_BOUND] * len(
+    if is_complex:
+        x0 = np.stack((amplitudes.real, amplitudes.imag, decay_rates)).T.flatten()
+        x0 = np.concatenate((offset_guess, x0))
+
+        bounds = offset_bounds + [NO_BOUND, NO_BOUND, POSITIVE_BOUND] * len(
             amplitudes
         )
     else:
-        x0 = [offset.real]
-        x1 = np.stack((amplitudes.real, decay_rates)).T.flatten()
-        x0 = np.concatenate((x0, x1))
-        bounds = [NO_BOUND] + [NO_BOUND, POSITIVE_BOUND] * len(amplitudes)
+        x0 = np.stack((amplitudes.real, decay_rates)).T.flatten()
+        x0 = np.concatenate((offset_guess, x0))
+        bounds = offset_bounds + [NO_BOUND, POSITIVE_BOUND] * len(amplitudes)
 
     x0 = np.array(x0)
 
@@ -157,15 +191,21 @@ def _post_fit_damped_cosine(
     phases: np.ndarray[float],
     pulsations: np.ndarray[float],
     decay_rates: np.ndarray[float],
+    options: _PostFitOptions
 ) -> DampedCosineResult:
     cost = ft.partial(_cost, times=times, signal=signal, model=_damped_cosine_adapter)
 
-    x0 = [offset]
-    x1 = np.stack((amplitudes, phases, pulsations, decay_rates)).T.flatten()
-    x0 = np.concatenate((x0, x1))
+    if isinstance(options, NoOffset):
+        offset_guess = [0.0]
+        offset_bounds = ZERO_BOUND
+    else:
+        offset_guess = [offset]
+        offset_bounds = NO_BOUND
 
-    bounds = [NO_BOUND]
-    bounds += [NO_BOUND, NO_BOUND, POSITIVE_BOUND, POSITIVE_BOUND] * len(amplitudes)
+    x0 = np.stack((amplitudes, phases, pulsations, decay_rates)).T.flatten()
+    x0 = np.concatenate((offset_guess, x0))
+
+    bounds = [offset_bounds] + [NO_BOUND, NO_BOUND, POSITIVE_BOUND, POSITIVE_BOUND] * len(amplitudes)
     xopt = minimize(cost, x0, bounds=bounds).x
     offset = xopt[0]
 

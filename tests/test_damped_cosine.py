@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.random import PCG64, Generator
 
-from bicfit import fit_damped_cosine, DampedCosineResult
+from bicfit import fit_damped_cosine, DampedCosineResult, NoOffset
 
 testdata = [
     (1.0, 0.2, 0.05, np.pi / 2, 10.0, 150, 110),
@@ -13,10 +13,10 @@ testdata = [
 @pytest.mark.parametrize(
     "amplitude, pulsation, decay_rate, phase, offset, horizon, n_points", testdata
 )
-@pytest.mark.parametrize("with_post_fit", [False, True])
+@pytest.mark.parametrize("post_fit", [False, True])
 @pytest.mark.parametrize("noise,tol", [(0, 0.08), (0.05, 0.2)])
 def test_single_damped_cosine(
-    amplitude, pulsation, decay_rate, phase, offset, horizon, n_points, with_post_fit, noise, tol
+    amplitude, pulsation, decay_rate, phase, offset, horizon, n_points, post_fit, noise, tol
 ):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
@@ -27,7 +27,7 @@ def test_single_damped_cosine(
         + noise_vec.real
     )
 
-    result = fit_damped_cosine(times, signal, n_modes=1, with_post_fit=with_post_fit)
+    result = fit_damped_cosine(times, signal, n_modes=1, post_fit=post_fit)
     try:
         assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
             "amplitude"
@@ -52,9 +52,9 @@ def test_single_damped_cosine(
         raise e
 
 
-@pytest.mark.parametrize("with_post_fit", [False, True])
+@pytest.mark.parametrize("post_fit", [False, True])
 @pytest.mark.parametrize("noise,tol", [(0, 0.08), (0.05, 0.2)])
-def test_two_damped_cosines(with_post_fit, noise, tol):
+def test_two_damped_cosines(post_fit, noise, tol):
     rng = Generator(PCG64(42))
     n_points = 100
     times = np.linspace(0, 150, n_points)
@@ -71,7 +71,7 @@ def test_two_damped_cosines(with_post_fit, noise, tol):
     signal += a2 * np.cos(phase2 + pulsation2 * times) * np.exp(-decay_rate2 * times)
     signal += noise_vec.real
 
-    result = fit_damped_cosine(times, signal, n_modes=2, with_post_fit=with_post_fit)
+    result = fit_damped_cosine(times, signal, n_modes=2, post_fit=post_fit)
     try:
         m1, m2 = result.modes
         if m1.pulsation > m2.pulsation:
@@ -121,3 +121,46 @@ def test_individual_mode():
     assert np.isclose(
         result(0.0), result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0)
     )
+
+
+@pytest.mark.parametrize(
+    "amplitude, pulsation, decay_rate, phase, _offset, horizon, n_points", testdata
+)
+def test_no_offset(
+        amplitude, pulsation, decay_rate, phase, _offset, horizon, n_points
+):
+    noise = 0.05
+    tol = .2
+
+    rng = Generator(PCG64(42))
+    times = np.linspace(0, horizon, n_points)
+    noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
+    signal = (
+            amplitude * np.cos(phase + pulsation * times) * np.exp(-decay_rate * times)
+            + noise_vec.real
+    )
+
+    result = fit_damped_cosine(times, signal, n_modes=1, post_fit=NoOffset())
+    try:
+        assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
+            "amplitude"
+        )
+        assert abs(result.modes[0].pulsation - pulsation) / pulsation < tol, "pulsation"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        dphi = (result.modes[0].phase - phase + np.pi) % (2 * np.pi) - np.pi
+        assert abs(dphi) < tol * np.pi, "phase"
+        assert abs(result.offset) == 0.0, "offset"
+    except AssertionError as e:
+        failed_test = e.args[0].split("\n")[0]
+        print(
+            f"Failed estimating '{failed_test}' for \n"
+            f"- amplitude   = {amplitude} (got {result.modes[0].amplitude})\n"
+            f"- pulsation   = {pulsation} (got {result.modes[0].pulsation})\n"
+            f"- decay_rate  = {decay_rate} (got {result.modes[0].decay_rate})\n"
+            f"- phase       = {phase} (got {result.modes[0].phase})\n"
+            f"- offset      = 0.0 (got {result.offset})\n"
+            f"- horizon     = {horizon}\n"
+            f"- n_points    = {n_points}"
+        )
+        raise e
+
