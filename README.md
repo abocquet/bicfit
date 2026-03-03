@@ -159,7 +159,7 @@ There are a few features that are not implemented yet but could be in the future
 
 You can run tests using `pytest`:
 ```bash
-uv sync
+uv sync --dev
 uv run pytest .
 ```
 

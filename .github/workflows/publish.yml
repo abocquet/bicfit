@@ -22,7 +22,7 @@ jobs:
       - name: Install Python 3.10
         run: uv python install 3.10
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --dev
       - name: Test
         run:  uv run pytest .
       - name: Build
