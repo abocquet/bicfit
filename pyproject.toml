@@ -1,6 +1,6 @@
 [project]
 name = "bicfit"
-version = "0.2.0"
+version = "0.3.3"
 description = "General purpose exponential function fitting"
 keywords = ["fit", "numerics"]
 authors = [
@@ -20,9 +20,9 @@ dependencies = [
 requires = ["uv_build >= 0.8.17, <0.9.0"]
 build-backend = "uv_build"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "ruff>=0.8",
+    "ruff>=0.15.0",
     "pytest>=8.0",
     "pytest-ordering",
     "pytest-sugar",
