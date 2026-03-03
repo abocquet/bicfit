@@ -16,7 +16,9 @@ complex_testdata = [
 ]
 
 
-@pytest.mark.parametrize("amplitude, decay_rate, offset, horizon, n_points", real_testdata)
+@pytest.mark.parametrize(
+    "amplitude, decay_rate, offset, horizon, n_points", real_testdata
+)
 @pytest.mark.parametrize(
     "post_fit,noise,tol",
     [(False, 0, 0.02), (False, 0.05, 0.2), (True, 0, 0.02), (True, 0.05, 0.1)],
@@ -29,12 +31,16 @@ def test_single_real_exponential(
     noise_vec = rng.normal(0, noise, n_points)
     signal = offset + amplitude * np.exp(-decay_rate * times) + noise_vec
 
-    result = fit_exponential_decay(times, signal, n_modes=1, post_fit=post_fit, is_complex=False)
+    result = fit_exponential_decay(
+        times, signal, n_modes=1, post_fit=post_fit, is_complex=False
+    )
     try:
         assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
             "amplitude"
         )
-        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, (
+            "decay_rate"
+        )
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed = e.args[0]
@@ -64,12 +70,16 @@ def test_single_complex_exponential(
     noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
     signal = offset + amplitude * np.exp(-decay_rate * times) + noise_vec
 
-    result = fit_exponential_decay(times, signal, n_modes=1, post_fit=post_fit, is_complex=True)
+    result = fit_exponential_decay(
+        times, signal, n_modes=1, post_fit=post_fit, is_complex=True
+    )
     amp_est = result.modes[0].amplitude
 
     try:
         assert abs(abs(amp_est) - abs(amplitude)) / abs(amplitude) < tol, "amplitude"
-        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, (
+            "decay_rate"
+        )
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed = e.args[0]
@@ -99,17 +109,26 @@ def test_two_real_exponentials(post_fit, noise, tol):
     decay_rate1, decay_rate2 = 0.01, 0.1
 
     signal = (
-        offset + a1 * np.exp(-decay_rate1 * times) + a2 * np.exp(-decay_rate2 * times) + noise_vec
+        offset
+        + a1 * np.exp(-decay_rate1 * times)
+        + a2 * np.exp(-decay_rate2 * times)
+        + noise_vec
     )
 
-    result = fit_exponential_decay(times, signal, n_modes=2, post_fit=post_fit, is_complex=False)
+    result = fit_exponential_decay(
+        times, signal, n_modes=2, post_fit=post_fit, is_complex=False
+    )
 
     try:
         assert abs(result.modes[0].amplitude - a1) / abs(a1) < tol, "a1"
-        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, "decay_rate1"
+        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, (
+            "decay_rate1"
+        )
 
         assert abs(result.modes[1].amplitude - a2) / abs(a2) < tol, "a2"
-        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, "decay_rate2"
+        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, (
+            "decay_rate2"
+        )
 
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
@@ -140,16 +159,25 @@ def test_two_complex_exponentials(post_fit, noise, tol):
     decay_rate1, decay_rate2 = 0.02, 0.1
 
     signal = (
-        offset + a1 * np.exp(-decay_rate1 * times) + a2 * np.exp(-decay_rate2 * times) + noise_vec
+        offset
+        + a1 * np.exp(-decay_rate1 * times)
+        + a2 * np.exp(-decay_rate2 * times)
+        + noise_vec
     )
 
-    result = fit_exponential_decay(times, signal, n_modes=2, post_fit=post_fit, is_complex=True)
+    result = fit_exponential_decay(
+        times, signal, n_modes=2, post_fit=post_fit, is_complex=True
+    )
     try:
         assert abs(result.modes[0].amplitude - a1) / abs(a1) < tol, "a1"
-        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, "decay_rate1"
+        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, (
+            "decay_rate1"
+        )
 
         assert abs(result.modes[1].amplitude - a2) / abs(a2) < tol, "a2"
-        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, "decay_rate2"
+        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, (
+            "decay_rate2"
+        )
 
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
@@ -188,24 +216,23 @@ def test_individual_mode():
 @pytest.mark.parametrize(
     "amplitude, decay_rate, offset, horizon, n_points", complex_testdata
 )
-@pytest.mark.parametrize(
-    "noise,tol",
-    [(0, 0.03), (0.05, 0.1)]
-)
-def test_no_offset(
-        amplitude, decay_rate, offset, horizon, n_points, noise, tol
-):
+@pytest.mark.parametrize("noise,tol", [(0, 0.03), (0.05, 0.1)])
+def test_no_offset(amplitude, decay_rate, offset, horizon, n_points, noise, tol):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
     noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
     signal = amplitude * np.exp(-decay_rate * times) + noise_vec
 
-    result = fit_exponential_decay(times, signal, n_modes=1, post_fit=NoOffset(), is_complex=True)
+    result = fit_exponential_decay(
+        times, signal, n_modes=1, post_fit=NoOffset(), is_complex=True
+    )
     amp_est = result.modes[0].amplitude
 
     try:
         assert abs(abs(amp_est) - abs(amplitude)) / abs(amplitude) < tol, "amplitude"
-        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, (
+            "decay_rate"
+        )
         assert abs(result.offset) < 1e-5, "offset"
     except AssertionError as e:
         failed = e.args[0]
@@ -218,4 +245,3 @@ def test_no_offset(
             f"- n_points  = {n_points}"
         )
         raise e
-

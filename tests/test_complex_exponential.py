@@ -10,7 +10,9 @@ testdata = [
 ]
 
 
-@pytest.mark.parametrize("amplitude, pulsation, decay_rate, offset, horizon, n_points", testdata)
+@pytest.mark.parametrize(
+    "amplitude, pulsation, decay_rate, offset, horizon, n_points", testdata
+)
 @pytest.mark.parametrize("post_fit", [False, True])
 @pytest.mark.parametrize("noise,tol", [(0, 0.01), (0.1, 0.15)])
 def test_single_exponential(
@@ -22,15 +24,15 @@ def test_single_exponential(
     signal = offset + amplitude * np.exp((1j * pulsation - decay_rate) * times) + noise
 
     # fit the signal
-    result = fit_complex_exponential(
-        times, signal, n_modes=1, post_fit=post_fit
-    )
+    result = fit_complex_exponential(times, signal, n_modes=1, post_fit=post_fit)
     try:
         assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
             "amplitude"
         )
         assert abs(result.modes[0].pulsation - pulsation) / pulsation < tol, "pulsation"
-        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, (
+            "decay_rate"
+        )
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
         failed_test = e.args[0].split("\n")[0]
@@ -67,18 +69,24 @@ def test_two_exponential(post_fit, noise, tol):
     signal += noise
 
     # fit the signal
-    result = fit_complex_exponential(
-        times, signal, n_modes=2, post_fit=post_fit
-    )
+    result = fit_complex_exponential(times, signal, n_modes=2, post_fit=post_fit)
 
     try:
         assert abs(result.modes[0].amplitude - a1) / a1 < tol, "a1"
-        assert abs(result.modes[0].pulsation - pulsation1) / pulsation1 < tol, "pulsation1"
-        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, "decay_rate1"
+        assert abs(result.modes[0].pulsation - pulsation1) / pulsation1 < tol, (
+            "pulsation1"
+        )
+        assert abs(result.modes[0].decay_rate - decay_rate1) / decay_rate1 < tol, (
+            "decay_rate1"
+        )
 
         assert abs(result.modes[1].amplitude - a2) / a2 < tol, "a2"
-        assert abs(result.modes[1].pulsation - pulsation2) / pulsation2 < tol, "pulsation2"
-        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, "decay_rate2"
+        assert abs(result.modes[1].pulsation - pulsation2) / pulsation2 < tol, (
+            "pulsation2"
+        )
+        assert abs(result.modes[1].decay_rate - decay_rate2) / decay_rate2 < tol, (
+            "decay_rate2"
+        )
 
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
     except AssertionError as e:
@@ -116,26 +124,27 @@ def test_individual_mode():
         result(0.0), result.modes[0](0.0) + result.modes[1](0.0) + result.modes[2](0.0)
     )
 
-@pytest.mark.parametrize("amplitude, pulsation, decay_rate, _offset, horizon, n_points", testdata)
-def test_no_offset(
-        amplitude, decay_rate, pulsation, _offset, horizon, n_points
-):
+
+@pytest.mark.parametrize(
+    "amplitude, pulsation, decay_rate, _offset, horizon, n_points", testdata
+)
+def test_no_offset(amplitude, decay_rate, pulsation, _offset, horizon, n_points):
     rng = Generator(PCG64(42))
-    noise,tol = 0.1, 0.15
+    noise, tol = 0.1, 0.15
     times = np.linspace(0, horizon, n_points)
     noise = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
     signal = amplitude * np.exp((1j * pulsation - decay_rate) * times) + noise
 
     # fit the signal
-    result = fit_complex_exponential(
-        times, signal, n_modes=1, post_fit=NoOffset()
-    )
+    result = fit_complex_exponential(times, signal, n_modes=1, post_fit=NoOffset())
     try:
         assert abs(result.modes[0].amplitude - amplitude) / abs(amplitude) < tol, (
             "amplitude"
         )
         assert abs(result.modes[0].pulsation - pulsation) / pulsation < tol, "pulsation"
-        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, (
+            "decay_rate"
+        )
         assert abs(result.offset) < 1e-5, "offset"
     except AssertionError as e:
         failed_test = e.args[0].split("\n")[0]
@@ -149,4 +158,3 @@ def test_no_offset(
             f"- n_points   = {n_points}"
         )
         raise e
-

@@ -16,7 +16,16 @@ testdata = [
 @pytest.mark.parametrize("post_fit", [False, True])
 @pytest.mark.parametrize("noise,tol", [(0, 0.08), (0.05, 0.2)])
 def test_single_damped_cosine(
-    amplitude, pulsation, decay_rate, phase, offset, horizon, n_points, post_fit, noise, tol
+    amplitude,
+    pulsation,
+    decay_rate,
+    phase,
+    offset,
+    horizon,
+    n_points,
+    post_fit,
+    noise,
+    tol,
 ):
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
@@ -33,7 +42,9 @@ def test_single_damped_cosine(
             "amplitude"
         )
         assert abs(result.modes[0].pulsation - pulsation) / pulsation < tol, "pulsation"
-        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, (
+            "decay_rate"
+        )
         dphi = (result.modes[0].phase - phase + np.pi) % (2 * np.pi) - np.pi
         assert abs(dphi) < tol * np.pi, "phase"
         assert abs(result.offset - offset) / abs(offset) < tol, "offset"
@@ -126,18 +137,16 @@ def test_individual_mode():
 @pytest.mark.parametrize(
     "amplitude, pulsation, decay_rate, phase, _offset, horizon, n_points", testdata
 )
-def test_no_offset(
-        amplitude, pulsation, decay_rate, phase, _offset, horizon, n_points
-):
+def test_no_offset(amplitude, pulsation, decay_rate, phase, _offset, horizon, n_points):
     noise = 0.05
-    tol = .2
+    tol = 0.2
 
     rng = Generator(PCG64(42))
     times = np.linspace(0, horizon, n_points)
     noise_vec = rng.normal(0, noise, n_points) + 1j * rng.normal(0, noise, n_points)
     signal = (
-            amplitude * np.cos(phase + pulsation * times) * np.exp(-decay_rate * times)
-            + noise_vec.real
+        amplitude * np.cos(phase + pulsation * times) * np.exp(-decay_rate * times)
+        + noise_vec.real
     )
 
     result = fit_damped_cosine(times, signal, n_modes=1, post_fit=NoOffset())
@@ -146,7 +155,9 @@ def test_no_offset(
             "amplitude"
         )
         assert abs(result.modes[0].pulsation - pulsation) / pulsation < tol, "pulsation"
-        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, "decay_rate"
+        assert abs(result.modes[0].decay_rate - decay_rate) / decay_rate < tol, (
+            "decay_rate"
+        )
         dphi = (result.modes[0].phase - phase + np.pi) % (2 * np.pi) - np.pi
         assert abs(dphi) < tol * np.pi, "phase"
         assert abs(result.offset) == 0.0, "offset"
@@ -163,4 +174,3 @@ def test_no_offset(
             f"- n_points    = {n_points}"
         )
         raise e
-

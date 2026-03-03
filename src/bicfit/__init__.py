@@ -13,6 +13,7 @@ from .results import ComplexResult, ExponentialDecayResult, DampedCosineResult
 
 PostFitOptions = bool | NoOffset
 
+
 def fit_complex_exponential(
     times: np.ndarray[float],
     signal: np.ndarray[complex],
@@ -44,7 +45,6 @@ def fit_complex_exponential(
     :return:
     """
 
-
     offset, amplitudes, pulsations, decay_rates = bicfit(
         times, signal, n_modes=n_modes, tol=tol, L_fraction=L_fraction
     )
@@ -73,7 +73,7 @@ def fit_exponential_decay(
     tol: float = 1e-3,
     L_fraction: float = 0.3,
 ) -> ExponentialDecayResult:
-    r""" Fits an exponential decay signal of the form
+    r"""Fits an exponential decay signal of the form
     $f(t) = x_0 + \sum_k A_k \exp(-\kappa_k t)$
 
     :param times: np.ndarray[float]
@@ -164,7 +164,9 @@ def fit_damped_cosine(
         L_fraction=L_fraction,
     )
 
-    amplitudes, phases, pulsations, decay_rates = _match_real_modes(amplitudes, pulsations, decay_rates, tol=tol)
+    amplitudes, phases, pulsations, decay_rates = _match_real_modes(
+        amplitudes, pulsations, decay_rates, tol=tol
+    )
     if abs(offset.imag) > tol:
         raise RuntimeError(
             f"Expected the offset to be real, but got {offset.imag} imaginary part, above fixed tolerance {tol}"
@@ -252,7 +254,9 @@ def bicfit(
     Y1_inv = np.linalg.pinv(Y1)
     eigenvalues = np.linalg.eigvals(Y1_inv @ Y2)
 
-    amplitudes, pulsations, decay_rates = _fit_amplitudes(eigenvalues, times, signal, cutoff_idx)
+    amplitudes, pulsations, decay_rates = _fit_amplitudes(
+        eigenvalues, times, signal, cutoff_idx
+    )
     constant_mode_idx = np.argmin(abs(np.exp(1j * pulsations - decay_rates) - 1))
 
     offset = amplitudes[constant_mode_idx] - offset
@@ -297,7 +301,7 @@ def _match_real_modes(
     decay_rates: np.ndarray[float],
     tol: float,
 ) -> Tuple[np.ndarray[float], np.ndarray[float], np.ndarray[float], np.ndarray[float]]:
-    """ Associates the complex eigenfrequencies of the fit together to form cosines and sines """
+    """Associates the complex eigenfrequencies of the fit together to form cosines and sines"""
 
     n = len(amplitudes)
     assert len(amplitudes) == len(pulsations) == len(decay_rates)
@@ -306,7 +310,10 @@ def _match_real_modes(
     normalized_frequency = 1j * abs(pulsations) + decay_rates
 
     # step 1: separate frequencies that are in the upper and lower complex plane
-    positive_w_indices, negative_w_indices = np.where(pulsations > 0)[0], np.where(pulsations < 0)[0]
+    positive_w_indices, negative_w_indices = (
+        np.where(pulsations > 0)[0],
+        np.where(pulsations < 0)[0],
+    )
 
     # step 2: get their normalized frequencies, i.e. mapped to the upper plane
     positive_w_normalized_frequencies = normalized_frequency[positive_w_indices]

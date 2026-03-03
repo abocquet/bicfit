@@ -18,7 +18,8 @@ def _complex_exponential_model(
 ) -> np.ndarray[complex]:
     t = np.array(t)
     return offset + np.sum(
-        amplitudes[:, None] * np.exp((1j * pulsations[:, None] - decay_rates[:, None]) * t),
+        amplitudes[:, None]
+        * np.exp((1j * pulsations[:, None] - decay_rates[:, None]) * t),
         axis=0,
     ).reshape(t.shape)
 

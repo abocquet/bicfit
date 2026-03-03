@@ -73,7 +73,9 @@ def _plot_complex(
     axs[2].legend()
 
 
-def _plot_real(result: DampedCosineResult | ExponentialDecayResult[float], ax: Axes | None):
+def _plot_real(
+    result: DampedCosineResult | ExponentialDecayResult[float], ax: Axes | None
+):
     fig = None
     if ax is None:
         fig, ax = plt.subplots()

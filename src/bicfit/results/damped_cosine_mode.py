@@ -33,7 +33,12 @@ class DampedCosineResult(Result):
     @property
     def modes(self) -> list[DampedCosineMode]:
         return [
-            DampedCosineMode(amplitude=amplitude, phase=phase, pulsation=pulsation, decay_rate=decay_rate)
+            DampedCosineMode(
+                amplitude=amplitude,
+                phase=phase,
+                pulsation=pulsation,
+                decay_rate=decay_rate,
+            )
             for amplitude, phase, pulsation, decay_rate in zip(
                 self.amplitudes, self.phases, self.pulsations, self.decay_rates
             )
@@ -45,7 +50,12 @@ class DampedCosineResult(Result):
 
     def __call__(self, t: FloatLike) -> FloatLike:
         return _damped_cosine_model(
-            t, self.offset, self.amplitudes, self.phases, self.pulsations, self.decay_rates
+            t,
+            self.offset,
+            self.amplitudes,
+            self.phases,
+            self.pulsations,
+            self.decay_rates,
         )
 
     def __repr__(self):
@@ -53,6 +63,6 @@ class DampedCosineResult(Result):
 
     def pretty_repr(self):
         if len(self.amplitudes) == 1:
-            return f"offset = {self.offset:0.2f}, amplitude = {self.amplitudes[0]:0.2e}, phase = {self.phases[0]:0.2f}, pulsation = {self.pulsations[0]:0.2e}, decay_rate / 2pi = {self.decay_rates[0] / (2*np.pi):0.2e}"
+            return f"offset = {self.offset:0.2f}, amplitude = {self.amplitudes[0]:0.2e}, phase = {self.phases[0]:0.2f}, pulsation = {self.pulsations[0]:0.2e}, decay_rate / 2pi = {self.decay_rates[0] / (2 * np.pi):0.2e}"
         else:
             return f"offset = {self.offset:0.2f}, {len(self.amplitudes)} modes"

@@ -32,7 +32,9 @@ class ExponentialDecayResult(Result, Generic[F]):
     @property
     def modes(self) -> List[ExponentialDecayMode]:
         return [
-            ExponentialDecayMode(amplitude=amplitude, decay_rate=decay_rate, offset=self.offset)
+            ExponentialDecayMode(
+                amplitude=amplitude, decay_rate=decay_rate, offset=self.offset
+            )
             for amplitude, decay_rate in zip(self.amplitudes, self.decay_rates)
         ]
 
@@ -48,13 +50,14 @@ class ExponentialDecayResult(Result, Generic[F]):
         else:
             offset_str = f"offset = {self.offset:0.2f}"
 
-
         if len(self.amplitudes) == 1:
             if np.iscomplex(self.amplitudes[0]):
-                amplitude_str = f"{self.amplitudes[0].real:0.2e} + {self.amplitudes[0].imag:0.2e}j"
+                amplitude_str = (
+                    f"{self.amplitudes[0].real:0.2e} + {self.amplitudes[0].imag:0.2e}j"
+                )
             else:
                 amplitude_str = f"{self.amplitudes[0]:0.2e}"
 
-            return f"offset = {offset_str}, amplitude = {amplitude_str}, decay_rate / 2pi = {self.decay_rates[0] / (2*np.pi):0.2e}"
+            return f"offset = {offset_str}, amplitude = {amplitude_str}, decay_rate / 2pi = {self.decay_rates[0] / (2 * np.pi):0.2e}"
         else:
             return f"offset = {offset_str}, {len(self.amplitudes)} modes"
