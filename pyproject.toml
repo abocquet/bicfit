@@ -1,6 +1,7 @@
 [project]
 name = "bicfit"
 description = "General purpose exponential function fitting"
+dynamic = ["version"]
 keywords = ["fit", "numerics"]
 authors = [
     {name = "Adrien Bocquet", email = "adrienbocquet38@gmail.com"},
